@@ -28,6 +28,7 @@
 #include "lsm6dsox_reg.h"
 #include "lis2dw12_reg.h"
 #include "adxl362_hal.h"
+#include "Fusion.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -57,6 +58,9 @@
 
 /* LSM6DSV Feature Enable/Disable */
 #define ENABLE_LSM6DSV_SENSOR_FUSION 0  // Enable SFLP (Sensor Fusion Low Power) for game rotation, gravity vectors, and gyro bias
+
+/* LSM6DSOX Feature Enable/Disable */
+#define ENABLE_LSM6DSOX_FUSION 1        // Enable Fusion library sensor fusion for LSM6DSOX (quaternion, Euler angles, linear accel)
 
 /* IMU I2C Addresses */
 #define LSM6DSV_I2C_ADDR  (0x6B << 1)  // LSM6DSV address (SDO/SA0 pin high)
@@ -115,6 +119,15 @@ static float lsm6dsv_quat[4];         // Quaternion: w, x, y, z (from game rotat
 #if ENABLE_LSM6DSOX
 static int16_t lsm6dsox_accel_raw[3]; // X, Y, Z accelerometer
 static int16_t lsm6dsox_gyro_raw[3];  // X, Y, Z gyroscope
+#if ENABLE_LSM6DSOX_FUSION
+static FusionAhrs lsm6dsox_fusion;    // Fusion AHRS algorithm instance
+static FusionQuaternion lsm6dsox_quat; // Quaternion output (w, x, y, z)
+static FusionEuler lsm6dsox_euler;    // Euler angles output (roll, pitch, yaw in degrees)
+static FusionVector lsm6dsox_linear_accel;  // Linear acceleration (gravity removed)
+static FusionVector lsm6dsox_earth_accel;   // Earth frame acceleration
+static FusionVector lsm6dsox_gravity;       // Gravity vector
+static uint32_t lsm6dsox_last_timestamp;    // Last update timestamp for delta time calculation
+#endif
 #endif
 #if ENABLE_LIS2DW12
 static int16_t lis2dw12_accel_raw[3]; // X, Y, Z accelerometer
@@ -149,6 +162,10 @@ static void LSM6DSV_ReadSFLP(void);
 #if ENABLE_LSM6DSOX
 static uint8_t LSM6DSOX_Init(void);  // Returns 1 if successful, 0 if failed
 static void LSM6DSOX_ReadData(void);
+#if ENABLE_LSM6DSOX_FUSION
+static void LSM6DSOX_FusionInit(void);
+static void LSM6DSOX_FusionUpdate(void);
+#endif
 #endif
 #if ENABLE_LIS2DW12
 static uint8_t LIS2DW12_Init(void);  // Returns 1 if successful, 0 if failed
@@ -536,6 +553,76 @@ static void LSM6DSOX_ReadData(void)
     lsm6dsox_angular_rate_raw_get(&lsm6dsox_ctx, lsm6dsox_gyro_raw);
   }
 }
+
+#if ENABLE_LSM6DSOX_FUSION
+/**
+ * @brief  Initialize Fusion library for LSM6DSOX sensor fusion
+ */
+static void LSM6DSOX_FusionInit(void)
+{
+  /* Initialize AHRS algorithm */
+  FusionAhrsInitialise(&lsm6dsox_fusion);
+
+  /* Configure AHRS settings */
+  FusionAhrsSettings settings = {
+    .convention = FusionConventionNed,           // NED (North-East-Down) coordinate convention
+    .gain = 0.5f,                                 // Algorithm gain (0.5 recommended for most applications)
+    .gyroscopeRange = 2000.0f,                    // Gyroscope range in degrees/s (matches hardware config)
+    .accelerationRejection = 10.0f,               // Acceleration rejection threshold in degrees
+    .magneticRejection = 0.0f,                    // No magnetometer available
+    .recoveryTriggerPeriod = 5,                   // Recovery trigger period in seconds
+  };
+
+  FusionAhrsSetSettings(&lsm6dsox_fusion, &settings);
+
+  /* Initialize timestamp */
+  lsm6dsox_last_timestamp = Get_Microseconds();
+}
+
+/**
+ * @brief  Update Fusion algorithm with LSM6DSOX sensor data
+ */
+static void LSM6DSOX_FusionUpdate(void)
+{
+  /* Get current timestamp and calculate delta time */
+  uint32_t current_timestamp = Get_Microseconds();
+  float delta_time = (float)(current_timestamp - lsm6dsox_last_timestamp) / 1000000.0f;  // Convert microseconds to seconds
+  lsm6dsox_last_timestamp = current_timestamp;
+
+  /* Convert sensor data from mg/mdps to g/dps (Fusion library expects these units) */
+  float accel_x_g = lsm6dsox_from_fs4_to_mg(lsm6dsox_accel_raw[0]) / 1000.0f;
+  float accel_y_g = lsm6dsox_from_fs4_to_mg(lsm6dsox_accel_raw[1]) / 1000.0f;
+  float accel_z_g = lsm6dsox_from_fs4_to_mg(lsm6dsox_accel_raw[2]) / 1000.0f;
+
+  float gyro_x_dps = lsm6dsox_from_fs2000_to_mdps(lsm6dsox_gyro_raw[0]) / 1000.0f;
+  float gyro_y_dps = lsm6dsox_from_fs2000_to_mdps(lsm6dsox_gyro_raw[1]) / 1000.0f;
+  float gyro_z_dps = lsm6dsox_from_fs2000_to_mdps(lsm6dsox_gyro_raw[2]) / 1000.0f;
+
+  /* Create FusionVector structures for sensor data */
+  FusionVector gyroscope = {
+    .axis.x = gyro_x_dps,
+    .axis.y = gyro_y_dps,
+    .axis.z = gyro_z_dps
+  };
+
+  FusionVector accelerometer = {
+    .axis.x = accel_x_g,
+    .axis.y = accel_y_g,
+    .axis.z = accel_z_g
+  };
+
+  /* Update AHRS algorithm (no magnetometer) */
+  FusionAhrsUpdateNoMagnetometer(&lsm6dsox_fusion, gyroscope, accelerometer, delta_time);
+
+  /* Retrieve fusion outputs */
+  lsm6dsox_quat = FusionAhrsGetQuaternion(&lsm6dsox_fusion);
+  lsm6dsox_euler = FusionQuaternionToEuler(lsm6dsox_quat);
+  lsm6dsox_linear_accel = FusionAhrsGetLinearAcceleration(&lsm6dsox_fusion);
+  lsm6dsox_earth_accel = FusionAhrsGetEarthAcceleration(&lsm6dsox_fusion);
+  lsm6dsox_gravity = FusionAhrsGetGravity(&lsm6dsox_fusion);
+}
+#endif
+
 #endif
 
 #if ENABLE_LIS2DW12
@@ -708,6 +795,39 @@ static void Print_IMU_Data(void)
              "LSM6DSOX,%lu,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f\r\n",
              timestamp, lsmox_ax, lsmox_ay, lsmox_az, lsmox_gx, lsmox_gy, lsmox_gz);
     tx_com((uint8_t*)buffer, strlen(buffer));
+
+#if ENABLE_LSM6DSOX_FUSION
+    /* LSM6DSOX_FUSION_QUAT output: LSM6DSOX_FUSION_QUAT,timestamp,qw,qx,qy,qz */
+    snprintf(buffer, sizeof(buffer),
+             "LSM6DSOX_FUSION_QUAT,%lu,%.4f,%.4f,%.4f,%.4f\r\n",
+             timestamp, lsm6dsox_quat.element.w, lsm6dsox_quat.element.x,
+             lsm6dsox_quat.element.y, lsm6dsox_quat.element.z);
+    tx_com((uint8_t*)buffer, strlen(buffer));
+
+    /* LSM6DSOX_FUSION_EULER output: LSM6DSOX_FUSION_EULER,timestamp,roll,pitch,yaw */
+    snprintf(buffer, sizeof(buffer),
+             "LSM6DSOX_FUSION_EULER,%lu,%.2f,%.2f,%.2f\r\n",
+             timestamp, lsm6dsox_euler.angle.roll, lsm6dsox_euler.angle.pitch, lsm6dsox_euler.angle.yaw);
+    tx_com((uint8_t*)buffer, strlen(buffer));
+
+    /* LSM6DSOX_FUSION_LINACC output: LSM6DSOX_FUSION_LINACC,timestamp,x,y,z (g) */
+    snprintf(buffer, sizeof(buffer),
+             "LSM6DSOX_FUSION_LINACC,%lu,%.4f,%.4f,%.4f\r\n",
+             timestamp, lsm6dsox_linear_accel.axis.x, lsm6dsox_linear_accel.axis.y, lsm6dsox_linear_accel.axis.z);
+    tx_com((uint8_t*)buffer, strlen(buffer));
+
+    /* LSM6DSOX_FUSION_EARTHACC output: LSM6DSOX_FUSION_EARTHACC,timestamp,x,y,z (g) */
+    snprintf(buffer, sizeof(buffer),
+             "LSM6DSOX_FUSION_EARTHACC,%lu,%.4f,%.4f,%.4f\r\n",
+             timestamp, lsm6dsox_earth_accel.axis.x, lsm6dsox_earth_accel.axis.y, lsm6dsox_earth_accel.axis.z);
+    tx_com((uint8_t*)buffer, strlen(buffer));
+
+    /* LSM6DSOX_FUSION_GRAVITY output: LSM6DSOX_FUSION_GRAVITY,timestamp,x,y,z (g) */
+    snprintf(buffer, sizeof(buffer),
+             "LSM6DSOX_FUSION_GRAVITY,%lu,%.4f,%.4f,%.4f\r\n",
+             timestamp, lsm6dsox_gravity.axis.x, lsm6dsox_gravity.axis.y, lsm6dsox_gravity.axis.z);
+    tx_com((uint8_t*)buffer, strlen(buffer));
+#endif
   }
 #endif
 
@@ -780,6 +900,34 @@ static void Print_IMU_Data(void)
              "[%lu us] LSM6DSOX: A(%.2f,%.2f,%.2f)mg G(%.2f,%.2f,%.2f)mdps\r\n",
              timestamp, lsmox_ax, lsmox_ay, lsmox_az, lsmox_gx, lsmox_gy, lsmox_gz);
     tx_com((uint8_t*)buffer, strlen(buffer));
+
+#if ENABLE_LSM6DSOX_FUSION
+    snprintf(buffer, sizeof(buffer),
+             "[%lu us] LSM6DSOX_FUSION: Q(%.4f,%.4f,%.4f,%.4f)\r\n",
+             timestamp, lsm6dsox_quat.element.w, lsm6dsox_quat.element.x,
+             lsm6dsox_quat.element.y, lsm6dsox_quat.element.z);
+    tx_com((uint8_t*)buffer, strlen(buffer));
+
+    snprintf(buffer, sizeof(buffer),
+             "[%lu us] LSM6DSOX_FUSION: Euler(R:%.2f, P:%.2f, Y:%.2f)deg\r\n",
+             timestamp, lsm6dsox_euler.angle.roll, lsm6dsox_euler.angle.pitch, lsm6dsox_euler.angle.yaw);
+    tx_com((uint8_t*)buffer, strlen(buffer));
+
+    snprintf(buffer, sizeof(buffer),
+             "[%lu us] LSM6DSOX_FUSION: LinAcc(%.4f,%.4f,%.4f)g\r\n",
+             timestamp, lsm6dsox_linear_accel.axis.x, lsm6dsox_linear_accel.axis.y, lsm6dsox_linear_accel.axis.z);
+    tx_com((uint8_t*)buffer, strlen(buffer));
+
+    snprintf(buffer, sizeof(buffer),
+             "[%lu us] LSM6DSOX_FUSION: EarthAcc(%.4f,%.4f,%.4f)g\r\n",
+             timestamp, lsm6dsox_earth_accel.axis.x, lsm6dsox_earth_accel.axis.y, lsm6dsox_earth_accel.axis.z);
+    tx_com((uint8_t*)buffer, strlen(buffer));
+
+    snprintf(buffer, sizeof(buffer),
+             "[%lu us] LSM6DSOX_FUSION: Gravity(%.4f,%.4f,%.4f)g\r\n",
+             timestamp, lsm6dsox_gravity.axis.x, lsm6dsox_gravity.axis.y, lsm6dsox_gravity.axis.z);
+    tx_com((uint8_t*)buffer, strlen(buffer));
+#endif
   }
 #endif
 
@@ -910,6 +1058,12 @@ int main(void)
 
 #if ENABLE_LSM6DSOX
   imu_status.lsm6dsox_present = LSM6DSOX_Init();
+#if ENABLE_LSM6DSOX_FUSION
+  if (imu_status.lsm6dsox_present)
+  {
+    LSM6DSOX_FusionInit();
+  }
+#endif
 #else
   imu_status.lsm6dsox_present = 0;
 #endif
@@ -1037,6 +1191,9 @@ int main(void)
     if (imu_status.lsm6dsox_present)
     {
       LSM6DSOX_ReadData();
+#if ENABLE_LSM6DSOX_FUSION
+      LSM6DSOX_FusionUpdate();
+#endif
     }
 #endif
 
@@ -1060,7 +1217,7 @@ int main(void)
 
     /* Small delay to prevent overwhelming the system */
     /* Note: In low power mode, ADXL362 samples at 6 Hz (~167ms period) */
-    HAL_Delay(1);  // 1ms delay -> ~1 kHz loop rate
+//    HAL_Delay(1);  // 1ms delay -> ~1 kHz loop rate
 
     /* USER CODE END WHILE */
 

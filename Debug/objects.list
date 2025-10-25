@@ -1,3 +1,6 @@
+"./Core/Src/FusionAhrs.o"
+"./Core/Src/FusionCompass.o"
+"./Core/Src/FusionOffset.o"
 "./Core/Src/adxl362_hal.o"
 "./Core/Src/lis2dw12_reg.o"
 "./Core/Src/lsm6dsox_reg.o"

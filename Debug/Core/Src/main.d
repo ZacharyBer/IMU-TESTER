@@ -37,7 +37,10 @@ Core/Src/main.o: ../Core/Src/main.c ../Core/Inc/main.h \
  ../Drivers/BSP/STM32U5xx_Nucleo/stm32u5xx_nucleo_errno.h \
  ../Core/Inc/lsm6dsv_reg.h ../Core/Inc/lsm6dsox_reg.h \
  ../Core/Inc/lis2dw12_reg.h ../Core/Inc/adxl362_hal.h ../Core/Inc/main.h \
- ../Core/Inc/ADXL362Reg.h
+ ../Core/Inc/ADXL362Reg.h ../Core/Inc/Fusion.h ../Core/Inc/FusionAhrs.h \
+ ../Core/Inc/FusionConvention.h ../Core/Inc/FusionMath.h \
+ ../Core/Inc/FusionAxes.h ../Core/Inc/FusionCalibration.h \
+ ../Core/Inc/FusionCompass.h ../Core/Inc/FusionOffset.h
 ../Core/Inc/main.h:
 ../Drivers/STM32U5xx_HAL_Driver/Inc/stm32u5xx_hal.h:
 ../Core/Inc/stm32u5xx_hal_conf.h:
@@ -81,3 +84,11 @@ Core/Src/main.o: ../Core/Src/main.c ../Core/Inc/main.h \
 ../Core/Inc/adxl362_hal.h:
 ../Core/Inc/main.h:
 ../Core/Inc/ADXL362Reg.h:
+../Core/Inc/Fusion.h:
+../Core/Inc/FusionAhrs.h:
+../Core/Inc/FusionConvention.h:
+../Core/Inc/FusionMath.h:
+../Core/Inc/FusionAxes.h:
+../Core/Inc/FusionCalibration.h:
+../Core/Inc/FusionCompass.h:
+../Core/Inc/FusionOffset.h:

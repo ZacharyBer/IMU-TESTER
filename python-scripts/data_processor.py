@@ -32,6 +32,7 @@ class IMUData:
         self.lis2dw12_available = False
         self.adxl362_available = False
         self.lsm6dsv_sflp_available = False
+        self.lsm6dsox_fusion_available = False
 
         # Separate timestamps for each IMU (they may sample at different rates)
         self.lsm_timestamp = deque(maxlen=max_samples)
@@ -72,12 +73,37 @@ class IMUData:
         self.lsm_quat_y = deque(maxlen=max_samples)
         self.lsm_quat_z = deque(maxlen=max_samples)
 
+        # LSM6DSOX Fusion library data
+        self.lsmox_fusion_timestamp = deque(maxlen=max_samples)
+        # Quaternion
+        self.lsmox_fusion_quat_w = deque(maxlen=max_samples)
+        self.lsmox_fusion_quat_x = deque(maxlen=max_samples)
+        self.lsmox_fusion_quat_y = deque(maxlen=max_samples)
+        self.lsmox_fusion_quat_z = deque(maxlen=max_samples)
+        # Euler angles
+        self.lsmox_fusion_roll = deque(maxlen=max_samples)
+        self.lsmox_fusion_pitch = deque(maxlen=max_samples)
+        self.lsmox_fusion_yaw = deque(maxlen=max_samples)
+        # Linear acceleration (gravity removed)
+        self.lsmox_fusion_linacc_x = deque(maxlen=max_samples)
+        self.lsmox_fusion_linacc_y = deque(maxlen=max_samples)
+        self.lsmox_fusion_linacc_z = deque(maxlen=max_samples)
+        # Earth frame acceleration
+        self.lsmox_fusion_earthacc_x = deque(maxlen=max_samples)
+        self.lsmox_fusion_earthacc_y = deque(maxlen=max_samples)
+        self.lsmox_fusion_earthacc_z = deque(maxlen=max_samples)
+        # Gravity vector
+        self.lsmox_fusion_gravity_x = deque(maxlen=max_samples)
+        self.lsmox_fusion_gravity_y = deque(maxlen=max_samples)
+        self.lsmox_fusion_gravity_z = deque(maxlen=max_samples)
+
         self.sample_count = 0
         self.lsm_sample_count = 0
         self.lsmox_sample_count = 0
         self.lis_sample_count = 0
         self.adxl_sample_count = 0
         self.lsm_sflp_sample_count = 0
+        self.lsmox_fusion_sample_count = 0
         self.start_time = None
 
         # Calibration data - stores bias for each sensor
@@ -171,6 +197,72 @@ class IMUData:
         self.lsm_sflp_sample_count += 1
         self.sample_count += 1
 
+    def add_lsm6dsox_fusion_quat_sample(self, timestamp, qw, qx, qy, qz):
+        """Add a new LSM6DSOX Fusion quaternion sample."""
+        if self.start_time is None:
+            self.start_time = timestamp
+
+        self.lsm6dsox_fusion_available = True
+        self.lsmox_fusion_timestamp.append(timestamp)
+        self.lsmox_fusion_quat_w.append(qw)
+        self.lsmox_fusion_quat_x.append(qx)
+        self.lsmox_fusion_quat_y.append(qy)
+        self.lsmox_fusion_quat_z.append(qz)
+
+        self.lsmox_fusion_sample_count += 1
+        self.sample_count += 1
+
+    def add_lsm6dsox_fusion_euler_sample(self, timestamp, roll, pitch, yaw):
+        """Add a new LSM6DSOX Fusion Euler angles sample."""
+        if self.start_time is None:
+            self.start_time = timestamp
+
+        self.lsm6dsox_fusion_available = True
+        # Reuse timestamp if already added
+        if len(self.lsmox_fusion_timestamp) == 0 or self.lsmox_fusion_timestamp[-1] != timestamp:
+            self.lsmox_fusion_timestamp.append(timestamp)
+
+        self.lsmox_fusion_roll.append(roll)
+        self.lsmox_fusion_pitch.append(pitch)
+        self.lsmox_fusion_yaw.append(yaw)
+
+        # Only increment if this is a new timestamp
+        if len(self.lsmox_fusion_timestamp) > 0 and self.lsmox_fusion_timestamp[-1] == timestamp:
+            pass  # Same timestamp as quaternion, don't double-count
+        else:
+            self.lsmox_fusion_sample_count += 1
+            self.sample_count += 1
+
+    def add_lsm6dsox_fusion_linacc_sample(self, timestamp, x, y, z):
+        """Add a new LSM6DSOX Fusion linear acceleration sample."""
+        if self.start_time is None:
+            self.start_time = timestamp
+
+        self.lsm6dsox_fusion_available = True
+        self.lsmox_fusion_linacc_x.append(x)
+        self.lsmox_fusion_linacc_y.append(y)
+        self.lsmox_fusion_linacc_z.append(z)
+
+    def add_lsm6dsox_fusion_earthacc_sample(self, timestamp, x, y, z):
+        """Add a new LSM6DSOX Fusion earth acceleration sample."""
+        if self.start_time is None:
+            self.start_time = timestamp
+
+        self.lsm6dsox_fusion_available = True
+        self.lsmox_fusion_earthacc_x.append(x)
+        self.lsmox_fusion_earthacc_y.append(y)
+        self.lsmox_fusion_earthacc_z.append(z)
+
+    def add_lsm6dsox_fusion_gravity_sample(self, timestamp, x, y, z):
+        """Add a new LSM6DSOX Fusion gravity vector sample."""
+        if self.start_time is None:
+            self.start_time = timestamp
+
+        self.lsm6dsox_fusion_available = True
+        self.lsmox_fusion_gravity_x.append(x)
+        self.lsmox_fusion_gravity_y.append(y)
+        self.lsmox_fusion_gravity_z.append(z)
+
     def get_lsm_accel_data(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """Get LSM6DSV accelerometer data."""
         return (np.array(self.lsm_timestamp),
@@ -220,6 +312,42 @@ class IMUData:
                 np.array(self.lsm_quat_x),
                 np.array(self.lsm_quat_y),
                 np.array(self.lsm_quat_z))
+
+    def get_lsm6dsox_fusion_quat_data(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        """Get LSM6DSOX Fusion quaternion data."""
+        return (np.array(self.lsmox_fusion_timestamp),
+                np.array(self.lsmox_fusion_quat_w),
+                np.array(self.lsmox_fusion_quat_x),
+                np.array(self.lsmox_fusion_quat_y),
+                np.array(self.lsmox_fusion_quat_z))
+
+    def get_lsm6dsox_fusion_euler_data(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        """Get LSM6DSOX Fusion Euler angles data."""
+        return (np.array(self.lsmox_fusion_timestamp),
+                np.array(self.lsmox_fusion_roll),
+                np.array(self.lsmox_fusion_pitch),
+                np.array(self.lsmox_fusion_yaw))
+
+    def get_lsm6dsox_fusion_linacc_data(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        """Get LSM6DSOX Fusion linear acceleration data."""
+        return (np.array(self.lsmox_fusion_timestamp),
+                np.array(self.lsmox_fusion_linacc_x),
+                np.array(self.lsmox_fusion_linacc_y),
+                np.array(self.lsmox_fusion_linacc_z))
+
+    def get_lsm6dsox_fusion_earthacc_data(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        """Get LSM6DSOX Fusion earth acceleration data."""
+        return (np.array(self.lsmox_fusion_timestamp),
+                np.array(self.lsmox_fusion_earthacc_x),
+                np.array(self.lsmox_fusion_earthacc_y),
+                np.array(self.lsmox_fusion_earthacc_z))
+
+    def get_lsm6dsox_fusion_gravity_data(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        """Get LSM6DSOX Fusion gravity vector data."""
+        return (np.array(self.lsmox_fusion_timestamp),
+                np.array(self.lsmox_fusion_gravity_x),
+                np.array(self.lsmox_fusion_gravity_y),
+                np.array(self.lsmox_fusion_gravity_z))
 
     @staticmethod
     def quaternion_to_euler(qw, qx, qy, qz) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -351,17 +479,36 @@ class IMUData:
         self.lsm_quat_x.clear()
         self.lsm_quat_y.clear()
         self.lsm_quat_z.clear()
+        self.lsmox_fusion_timestamp.clear()
+        self.lsmox_fusion_quat_w.clear()
+        self.lsmox_fusion_quat_x.clear()
+        self.lsmox_fusion_quat_y.clear()
+        self.lsmox_fusion_quat_z.clear()
+        self.lsmox_fusion_roll.clear()
+        self.lsmox_fusion_pitch.clear()
+        self.lsmox_fusion_yaw.clear()
+        self.lsmox_fusion_linacc_x.clear()
+        self.lsmox_fusion_linacc_y.clear()
+        self.lsmox_fusion_linacc_z.clear()
+        self.lsmox_fusion_earthacc_x.clear()
+        self.lsmox_fusion_earthacc_y.clear()
+        self.lsmox_fusion_earthacc_z.clear()
+        self.lsmox_fusion_gravity_x.clear()
+        self.lsmox_fusion_gravity_y.clear()
+        self.lsmox_fusion_gravity_z.clear()
         self.sample_count = 0
         self.lsm_sample_count = 0
         self.lsmox_sample_count = 0
         self.lis_sample_count = 0
         self.adxl_sample_count = 0
         self.lsm_sflp_sample_count = 0
+        self.lsmox_fusion_sample_count = 0
         self.lsm6dsv_available = False
         self.lsm6dsox_available = False
         self.lis2dw12_available = False
         self.adxl362_available = False
         self.lsm6dsv_sflp_available = False
+        self.lsm6dsox_fusion_available = False
         self.start_time = None
 
 
@@ -837,6 +984,62 @@ class CSVLoader:
                             except ValueError:
                                 continue  # Skip invalid lines
 
+                        elif imu_type == 'LSM6DSOX_FUSION_QUAT' and len(parts) >= 6:
+                            # Format: LSM6DSOX_FUSION_QUAT,timestamp,qw,qx,qy,qz
+                            try:
+                                timestamp = float(parts[1])
+                                qw = float(parts[2])
+                                qx = float(parts[3])
+                                qy = float(parts[4])
+                                qz = float(parts[5])
+                                imu_data.add_lsm6dsox_fusion_quat_sample(timestamp, qw, qx, qy, qz)
+                            except ValueError:
+                                continue  # Skip invalid lines
+
+                        elif imu_type == 'LSM6DSOX_FUSION_EULER' and len(parts) >= 5:
+                            # Format: LSM6DSOX_FUSION_EULER,timestamp,roll,pitch,yaw
+                            try:
+                                timestamp = float(parts[1])
+                                roll = float(parts[2])
+                                pitch = float(parts[3])
+                                yaw = float(parts[4])
+                                imu_data.add_lsm6dsox_fusion_euler_sample(timestamp, roll, pitch, yaw)
+                            except ValueError:
+                                continue  # Skip invalid lines
+
+                        elif imu_type == 'LSM6DSOX_FUSION_LINACC' and len(parts) >= 5:
+                            # Format: LSM6DSOX_FUSION_LINACC,timestamp,x,y,z
+                            try:
+                                timestamp = float(parts[1])
+                                x = float(parts[2])
+                                y = float(parts[3])
+                                z = float(parts[4])
+                                imu_data.add_lsm6dsox_fusion_linacc_sample(timestamp, x, y, z)
+                            except ValueError:
+                                continue  # Skip invalid lines
+
+                        elif imu_type == 'LSM6DSOX_FUSION_EARTHACC' and len(parts) >= 5:
+                            # Format: LSM6DSOX_FUSION_EARTHACC,timestamp,x,y,z
+                            try:
+                                timestamp = float(parts[1])
+                                x = float(parts[2])
+                                y = float(parts[3])
+                                z = float(parts[4])
+                                imu_data.add_lsm6dsox_fusion_earthacc_sample(timestamp, x, y, z)
+                            except ValueError:
+                                continue  # Skip invalid lines
+
+                        elif imu_type == 'LSM6DSOX_FUSION_GRAVITY' and len(parts) >= 5:
+                            # Format: LSM6DSOX_FUSION_GRAVITY,timestamp,x,y,z
+                            try:
+                                timestamp = float(parts[1])
+                                x = float(parts[2])
+                                y = float(parts[3])
+                                z = float(parts[4])
+                                imu_data.add_lsm6dsox_fusion_gravity_sample(timestamp, x, y, z)
+                            except ValueError:
+                                continue  # Skip invalid lines
+
             return imu_data.sample_count > 0
 
         except Exception as e:
@@ -853,6 +1056,11 @@ class SerialReader(QThread):
     lis2dw12_data_received = pyqtSignal(float, float, float, float)  # timestamp, ax, ay, az
     adxl362_data_received = pyqtSignal(float, float, float, float)  # timestamp, ax, ay, az
     lsm6dsv_sflp_data_received = pyqtSignal(float, float, float, float, float)  # timestamp, qw, qx, qy, qz
+    lsm6dsox_fusion_quat_received = pyqtSignal(float, float, float, float, float)  # timestamp, qw, qx, qy, qz
+    lsm6dsox_fusion_euler_received = pyqtSignal(float, float, float, float)  # timestamp, roll, pitch, yaw
+    lsm6dsox_fusion_linacc_received = pyqtSignal(float, float, float, float)  # timestamp, x, y, z
+    lsm6dsox_fusion_earthacc_received = pyqtSignal(float, float, float, float)  # timestamp, x, y, z
+    lsm6dsox_fusion_gravity_received = pyqtSignal(float, float, float, float)  # timestamp, x, y, z
     error_occurred = pyqtSignal(str)
     connection_status = pyqtSignal(bool)
     imu_detected = pyqtSignal(str, bool)  # imu_type, is_present
@@ -956,6 +1164,57 @@ class SerialReader(QThread):
 
                             # Emit SFLP data
                             self.lsm6dsv_sflp_data_received.emit(timestamp, qw, qx, qy, qz)
+
+                        elif imu_type == 'LSM6DSOX_FUSION_QUAT' and len(parts) >= 6:
+                            # Format: LSM6DSOX_FUSION_QUAT,timestamp,qw,qx,qy,qz
+                            timestamp = float(parts[1])
+                            qw = float(parts[2])
+                            qx = float(parts[3])
+                            qy = float(parts[4])
+                            qz = float(parts[5])
+
+                            # Emit fusion quaternion data
+                            self.lsm6dsox_fusion_quat_received.emit(timestamp, qw, qx, qy, qz)
+
+                        elif imu_type == 'LSM6DSOX_FUSION_EULER' and len(parts) >= 5:
+                            # Format: LSM6DSOX_FUSION_EULER,timestamp,roll,pitch,yaw
+                            timestamp = float(parts[1])
+                            roll = float(parts[2])
+                            pitch = float(parts[3])
+                            yaw = float(parts[4])
+
+                            # Emit fusion Euler data
+                            self.lsm6dsox_fusion_euler_received.emit(timestamp, roll, pitch, yaw)
+
+                        elif imu_type == 'LSM6DSOX_FUSION_LINACC' and len(parts) >= 5:
+                            # Format: LSM6DSOX_FUSION_LINACC,timestamp,x,y,z
+                            timestamp = float(parts[1])
+                            x = float(parts[2])
+                            y = float(parts[3])
+                            z = float(parts[4])
+
+                            # Emit fusion linear accel data
+                            self.lsm6dsox_fusion_linacc_received.emit(timestamp, x, y, z)
+
+                        elif imu_type == 'LSM6DSOX_FUSION_EARTHACC' and len(parts) >= 5:
+                            # Format: LSM6DSOX_FUSION_EARTHACC,timestamp,x,y,z
+                            timestamp = float(parts[1])
+                            x = float(parts[2])
+                            y = float(parts[3])
+                            z = float(parts[4])
+
+                            # Emit fusion earth accel data
+                            self.lsm6dsox_fusion_earthacc_received.emit(timestamp, x, y, z)
+
+                        elif imu_type == 'LSM6DSOX_FUSION_GRAVITY' and len(parts) >= 5:
+                            # Format: LSM6DSOX_FUSION_GRAVITY,timestamp,x,y,z
+                            timestamp = float(parts[1])
+                            x = float(parts[2])
+                            y = float(parts[3])
+                            z = float(parts[4])
+
+                            # Emit fusion gravity data
+                            self.lsm6dsox_fusion_gravity_received.emit(timestamp, x, y, z)
 
                 except ValueError:
                     # Skip invalid lines

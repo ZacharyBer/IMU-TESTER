@@ -5,6 +5,9 @@
 
 # Add inputs and outputs from these tool invocations to the build variables 
 C_SRCS += \
+../Core/Src/FusionAhrs.c \
+../Core/Src/FusionCompass.c \
+../Core/Src/FusionOffset.c \
 ../Core/Src/adxl362_hal.c \
 ../Core/Src/lis2dw12_reg.c \
 ../Core/Src/lsm6dsox_reg.c \
@@ -17,6 +20,9 @@ C_SRCS += \
 ../Core/Src/system_stm32u5xx.c 
 
 OBJS += \
+./Core/Src/FusionAhrs.o \
+./Core/Src/FusionCompass.o \
+./Core/Src/FusionOffset.o \
 ./Core/Src/adxl362_hal.o \
 ./Core/Src/lis2dw12_reg.o \
 ./Core/Src/lsm6dsox_reg.o \
@@ -29,6 +35,9 @@ OBJS += \
 ./Core/Src/system_stm32u5xx.o 
 
 C_DEPS += \
+./Core/Src/FusionAhrs.d \
+./Core/Src/FusionCompass.d \
+./Core/Src/FusionOffset.d \
 ./Core/Src/adxl362_hal.d \
 ./Core/Src/lis2dw12_reg.d \
 ./Core/Src/lsm6dsox_reg.d \
@@ -48,7 +57,7 @@ Core/Src/%.o Core/Src/%.su Core/Src/%.cyclo: ../Core/Src/%.c Core/Src/subdir.mk
 clean: clean-Core-2f-Src
 
 clean-Core-2f-Src:
-	-$(RM) ./Core/Src/adxl362_hal.cyclo ./Core/Src/adxl362_hal.d ./Core/Src/adxl362_hal.o ./Core/Src/adxl362_hal.su ./Core/Src/lis2dw12_reg.cyclo ./Core/Src/lis2dw12_reg.d ./Core/Src/lis2dw12_reg.o ./Core/Src/lis2dw12_reg.su ./Core/Src/lsm6dsox_reg.cyclo ./Core/Src/lsm6dsox_reg.d ./Core/Src/lsm6dsox_reg.o ./Core/Src/lsm6dsox_reg.su ./Core/Src/lsm6dsv_reg.cyclo ./Core/Src/lsm6dsv_reg.d ./Core/Src/lsm6dsv_reg.o ./Core/Src/lsm6dsv_reg.su ./Core/Src/main.cyclo ./Core/Src/main.d ./Core/Src/main.o ./Core/Src/main.su ./Core/Src/stm32u5xx_hal_msp.cyclo ./Core/Src/stm32u5xx_hal_msp.d ./Core/Src/stm32u5xx_hal_msp.o ./Core/Src/stm32u5xx_hal_msp.su ./Core/Src/stm32u5xx_it.cyclo ./Core/Src/stm32u5xx_it.d ./Core/Src/stm32u5xx_it.o ./Core/Src/stm32u5xx_it.su ./Core/Src/syscalls.cyclo ./Core/Src/syscalls.d ./Core/Src/syscalls.o ./Core/Src/syscalls.su ./Core/Src/sysmem.cyclo ./Core/Src/sysmem.d ./Core/Src/sysmem.o ./Core/Src/sysmem.su ./Core/Src/system_stm32u5xx.cyclo ./Core/Src/system_stm32u5xx.d ./Core/Src/system_stm32u5xx.o ./Core/Src/system_stm32u5xx.su
+	-$(RM) ./Core/Src/FusionAhrs.cyclo ./Core/Src/FusionAhrs.d ./Core/Src/FusionAhrs.o ./Core/Src/FusionAhrs.su ./Core/Src/FusionCompass.cyclo ./Core/Src/FusionCompass.d ./Core/Src/FusionCompass.o ./Core/Src/FusionCompass.su ./Core/Src/FusionOffset.cyclo ./Core/Src/FusionOffset.d ./Core/Src/FusionOffset.o ./Core/Src/FusionOffset.su ./Core/Src/adxl362_hal.cyclo ./Core/Src/adxl362_hal.d ./Core/Src/adxl362_hal.o ./Core/Src/adxl362_hal.su ./Core/Src/lis2dw12_reg.cyclo ./Core/Src/lis2dw12_reg.d ./Core/Src/lis2dw12_reg.o ./Core/Src/lis2dw12_reg.su ./Core/Src/lsm6dsox_reg.cyclo ./Core/Src/lsm6dsox_reg.d ./Core/Src/lsm6dsox_reg.o ./Core/Src/lsm6dsox_reg.su ./Core/Src/lsm6dsv_reg.cyclo ./Core/Src/lsm6dsv_reg.d ./Core/Src/lsm6dsv_reg.o ./Core/Src/lsm6dsv_reg.su ./Core/Src/main.cyclo ./Core/Src/main.d ./Core/Src/main.o ./Core/Src/main.su ./Core/Src/stm32u5xx_hal_msp.cyclo ./Core/Src/stm32u5xx_hal_msp.d ./Core/Src/stm32u5xx_hal_msp.o ./Core/Src/stm32u5xx_hal_msp.su ./Core/Src/stm32u5xx_it.cyclo ./Core/Src/stm32u5xx_it.d ./Core/Src/stm32u5xx_it.o ./Core/Src/stm32u5xx_it.su ./Core/Src/syscalls.cyclo ./Core/Src/syscalls.d ./Core/Src/syscalls.o ./Core/Src/syscalls.su ./Core/Src/sysmem.cyclo ./Core/Src/sysmem.d ./Core/Src/sysmem.o ./Core/Src/sysmem.su ./Core/Src/system_stm32u5xx.cyclo ./Core/Src/system_stm32u5xx.d ./Core/Src/system_stm32u5xx.o ./Core/Src/system_stm32u5xx.su
 
 .PHONY: clean-Core-2f-Src
 

@@ -32,7 +32,7 @@ class IMUVisualizer(QMainWindow):
 
         # State
         self.baud_rate = 1000000  # Default to 1Mbit to match firmware
-        self.current_imu = "LSM6DSV_ACCEL"  # LSM6DSV_ACCEL, LSM6DSV_GYRO, LSM6DSOX_ACCEL, LSM6DSOX_GYRO, LIS2DW12, ADXL362, LSM6DSV_SFLP
+        self.current_imu = "LSM6DSV_ACCEL"  # LSM6DSV_ACCEL, LSM6DSV_GYRO, LSM6DSOX_ACCEL, LSM6DSOX_GYRO, LIS2DW12, ADXL362, LSM6DSV_SFLP, LSM6DSOX_FUSION_QUAT, LSM6DSOX_FUSION_EULER, LSM6DSOX_FUSION_LINACC, LSM6DSOX_FUSION_EARTHACC, LSM6DSOX_FUSION_GRAVITY
         self.current_graph = "XYZ"  # XYZ, MAGNITUDE, 3D
         self.integration_level = 0  # 0=raw, 1=first integration, 2=second integration
         self.detrend_enabled = False
@@ -185,6 +185,26 @@ class IMUVisualizer(QMainWindow):
         self.imu_button_group.addButton(self.adxl_radio, 7)
         imu_layout.addWidget(self.adxl_radio)
 
+        self.lsmox_fusion_quat_radio = QRadioButton("LSM6DSOX - Fusion Quaternion")
+        self.imu_button_group.addButton(self.lsmox_fusion_quat_radio, 8)
+        imu_layout.addWidget(self.lsmox_fusion_quat_radio)
+
+        self.lsmox_fusion_euler_radio = QRadioButton("LSM6DSOX - Fusion Euler Angles")
+        self.imu_button_group.addButton(self.lsmox_fusion_euler_radio, 9)
+        imu_layout.addWidget(self.lsmox_fusion_euler_radio)
+
+        self.lsmox_fusion_linacc_radio = QRadioButton("LSM6DSOX - Fusion Linear Accel")
+        self.imu_button_group.addButton(self.lsmox_fusion_linacc_radio, 10)
+        imu_layout.addWidget(self.lsmox_fusion_linacc_radio)
+
+        self.lsmox_fusion_earthacc_radio = QRadioButton("LSM6DSOX - Fusion Earth Accel")
+        self.imu_button_group.addButton(self.lsmox_fusion_earthacc_radio, 11)
+        imu_layout.addWidget(self.lsmox_fusion_earthacc_radio)
+
+        self.lsmox_fusion_gravity_radio = QRadioButton("LSM6DSOX - Fusion Gravity")
+        self.imu_button_group.addButton(self.lsmox_fusion_gravity_radio, 12)
+        imu_layout.addWidget(self.lsmox_fusion_gravity_radio)
+
         self.imu_button_group.buttonClicked.connect(self.on_imu_changed)
 
         imu_group.setLayout(imu_layout)
@@ -278,6 +298,7 @@ class IMUVisualizer(QMainWindow):
         self.lis2dw12_status_label = QLabel("LIS2DW12: Unknown")
         self.adxl362_status_label = QLabel("ADXL362: Unknown")
         self.lsm6dsv_sflp_status_label = QLabel("LSM6DSV SFLP: Unknown")
+        self.lsm6dsox_fusion_status_label = QLabel("LSM6DSOX Fusion: Unknown")
 
         font = QFont()
         font.setBold(True)
@@ -286,10 +307,12 @@ class IMUVisualizer(QMainWindow):
         self.lis2dw12_status_label.setFont(font)
         self.adxl362_status_label.setFont(font)
         self.lsm6dsv_sflp_status_label.setFont(font)
+        self.lsm6dsox_fusion_status_label.setFont(font)
 
         status_layout.addWidget(self.lsm6dsv_status_label)
         status_layout.addWidget(self.lsm6dsv_sflp_status_label)
         status_layout.addWidget(self.lsm6dsox_status_label)
+        status_layout.addWidget(self.lsm6dsox_fusion_status_label)
         status_layout.addWidget(self.lis2dw12_status_label)
         status_layout.addWidget(self.adxl362_status_label)
         status_group.setLayout(status_layout)
@@ -537,6 +560,11 @@ class IMUVisualizer(QMainWindow):
         self.serial_reader.lis2dw12_data_received.connect(self.on_lis2dw12_data_received)
         self.serial_reader.adxl362_data_received.connect(self.on_adxl362_data_received)
         self.serial_reader.lsm6dsv_sflp_data_received.connect(self.on_lsm6dsv_sflp_data_received)
+        self.serial_reader.lsm6dsox_fusion_quat_received.connect(self.on_lsm6dsox_fusion_quat_received)
+        self.serial_reader.lsm6dsox_fusion_euler_received.connect(self.on_lsm6dsox_fusion_euler_received)
+        self.serial_reader.lsm6dsox_fusion_linacc_received.connect(self.on_lsm6dsox_fusion_linacc_received)
+        self.serial_reader.lsm6dsox_fusion_earthacc_received.connect(self.on_lsm6dsox_fusion_earthacc_received)
+        self.serial_reader.lsm6dsox_fusion_gravity_received.connect(self.on_lsm6dsox_fusion_gravity_received)
         self.serial_reader.error_occurred.connect(self.on_serial_error)
         self.serial_reader.connection_status.connect(self.on_connection_status_changed)
 
@@ -608,6 +636,26 @@ class IMUVisualizer(QMainWindow):
         """Handle received LSM6DSV SFLP serial data."""
         self.imu_data.add_lsm6dsv_sflp_sample(timestamp, qw, qx, qy, qz)
 
+    def on_lsm6dsox_fusion_quat_received(self, timestamp, qw, qx, qy, qz):
+        """Handle received LSM6DSOX Fusion quaternion serial data."""
+        self.imu_data.add_lsm6dsox_fusion_quat_sample(timestamp, qw, qx, qy, qz)
+
+    def on_lsm6dsox_fusion_euler_received(self, timestamp, roll, pitch, yaw):
+        """Handle received LSM6DSOX Fusion Euler angles serial data."""
+        self.imu_data.add_lsm6dsox_fusion_euler_sample(timestamp, roll, pitch, yaw)
+
+    def on_lsm6dsox_fusion_linacc_received(self, timestamp, x, y, z):
+        """Handle received LSM6DSOX Fusion linear acceleration serial data."""
+        self.imu_data.add_lsm6dsox_fusion_linacc_sample(timestamp, x, y, z)
+
+    def on_lsm6dsox_fusion_earthacc_received(self, timestamp, x, y, z):
+        """Handle received LSM6DSOX Fusion earth acceleration serial data."""
+        self.imu_data.add_lsm6dsox_fusion_earthacc_sample(timestamp, x, y, z)
+
+    def on_lsm6dsox_fusion_gravity_received(self, timestamp, x, y, z):
+        """Handle received LSM6DSOX Fusion gravity vector serial data."""
+        self.imu_data.add_lsm6dsox_fusion_gravity_sample(timestamp, x, y, z)
+
     def update_imu_status(self):
         """Update IMU status labels based on available data."""
         # Update LSM6DSV status
@@ -666,6 +714,24 @@ class IMUVisualizer(QMainWindow):
             self.lsm6dsv_sflp_status_label.setStyleSheet("color: gray;")
             self.lsm_sflp_radio.setEnabled(False)
 
+        # Update LSM6DSOX Fusion status
+        if self.imu_data.lsm6dsox_fusion_available:
+            self.lsm6dsox_fusion_status_label.setText(f"LSM6DSOX Fusion: Active ({self.imu_data.lsmox_fusion_sample_count} samples)")
+            self.lsm6dsox_fusion_status_label.setStyleSheet("color: green;")
+            self.lsmox_fusion_quat_radio.setEnabled(True)
+            self.lsmox_fusion_euler_radio.setEnabled(True)
+            self.lsmox_fusion_linacc_radio.setEnabled(True)
+            self.lsmox_fusion_earthacc_radio.setEnabled(True)
+            self.lsmox_fusion_gravity_radio.setEnabled(True)
+        else:
+            self.lsm6dsox_fusion_status_label.setText("LSM6DSOX Fusion: Not Detected")
+            self.lsm6dsox_fusion_status_label.setStyleSheet("color: gray;")
+            self.lsmox_fusion_quat_radio.setEnabled(False)
+            self.lsmox_fusion_euler_radio.setEnabled(False)
+            self.lsmox_fusion_linacc_radio.setEnabled(False)
+            self.lsmox_fusion_earthacc_radio.setEnabled(False)
+            self.lsmox_fusion_gravity_radio.setEnabled(False)
+
     def on_serial_error(self, error_msg: str):
         """Handle serial errors."""
         self.statusBar().showMessage(f"Error: {error_msg}", 5000)
@@ -699,11 +765,21 @@ class IMUVisualizer(QMainWindow):
             self.current_imu = "LSM6DSOX_GYRO"
         elif self.lis_radio.isChecked():
             self.current_imu = "LIS2DW12"
+        elif self.lsmox_fusion_quat_radio.isChecked():
+            self.current_imu = "LSM6DSOX_FUSION_QUAT"
+        elif self.lsmox_fusion_euler_radio.isChecked():
+            self.current_imu = "LSM6DSOX_FUSION_EULER"
+        elif self.lsmox_fusion_linacc_radio.isChecked():
+            self.current_imu = "LSM6DSOX_FUSION_LINACC"
+        elif self.lsmox_fusion_earthacc_radio.isChecked():
+            self.current_imu = "LSM6DSOX_FUSION_EARTHACC"
+        elif self.lsmox_fusion_gravity_radio.isChecked():
+            self.current_imu = "LSM6DSOX_FUSION_GRAVITY"
         else:
             self.current_imu = "ADXL362"
 
-        # Show/hide SFLP view mode selector
-        if self.current_imu == "LSM6DSV_SFLP":
+        # Show/hide SFLP view mode selector (also for fusion quaternion mode)
+        if self.current_imu == "LSM6DSV_SFLP" or self.current_imu == "LSM6DSOX_FUSION_QUAT":
             self.sflp_view_combo.setVisible(True)
         else:
             self.sflp_view_combo.setVisible(False)
@@ -1080,6 +1156,31 @@ class IMUVisualizer(QMainWindow):
             self.integration_combo.addItems(["Raw (Orientation)"])
             self.integration_combo.setEnabled(False)
             self.integration_level = 0
+        elif self.current_imu == "LSM6DSOX_FUSION_QUAT":
+            # LSM6DSOX Fusion Quaternion: Raw only
+            self.integration_combo.addItems(["Raw (Quaternion)"])
+            self.integration_combo.setEnabled(False)
+            self.integration_level = 0
+        elif self.current_imu == "LSM6DSOX_FUSION_EULER":
+            # LSM6DSOX Fusion Euler: Raw only
+            self.integration_combo.addItems(["Raw (Euler Angles)"])
+            self.integration_combo.setEnabled(False)
+            self.integration_level = 0
+        elif self.current_imu == "LSM6DSOX_FUSION_LINACC":
+            # LSM6DSOX Fusion Linear Acceleration: Raw only (gravity removed)
+            self.integration_combo.addItems(["Raw (Linear Accel)"])
+            self.integration_combo.setEnabled(False)
+            self.integration_level = 0
+        elif self.current_imu == "LSM6DSOX_FUSION_EARTHACC":
+            # LSM6DSOX Fusion Earth Acceleration: Raw only (in earth frame)
+            self.integration_combo.addItems(["Raw (Earth Accel)"])
+            self.integration_combo.setEnabled(False)
+            self.integration_level = 0
+        elif self.current_imu == "LSM6DSOX_FUSION_GRAVITY":
+            # LSM6DSOX Fusion Gravity: Raw only
+            self.integration_combo.addItems(["Raw (Gravity)"])
+            self.integration_combo.setEnabled(False)
+            self.integration_level = 0
         elif self.current_imu in ["LSM6DSV_ACCEL", "LSM6DSOX_ACCEL", "LIS2DW12", "ADXL362", "LSM6DSV_BOTH"]:
             # Accelerometer or BOTH: Raw, Velocity, Position
             # For BOTH mode: Level 0 = Raw (Accel + AngVel), Level 1 = Velocity + Angle, Level 2 = Position + Angle
@@ -1297,6 +1398,43 @@ class IMUVisualizer(QMainWindow):
                 data_type = "Quaternion"
                 units = ""
 
+        elif self.current_imu == "LSM6DSOX_FUSION_QUAT":
+            if not self.imu_data.lsm6dsox_fusion_available:
+                return  # No data for this IMU
+            timestamps, qw, qx, qy, qz = self.imu_data.get_lsm6dsox_fusion_quat_data()
+            # Apply filtering to quaternion data
+            qw, qx, qy, qz = self.apply_current_filter_to_quaternion(timestamps, qw, qx, qy, qz)
+            sensor_name = "LSM6DSOX Fusion (Quaternion)"
+            data_type = "Quaternion"
+            units = ""
+        elif self.current_imu == "LSM6DSOX_FUSION_EULER":
+            if not self.imu_data.lsm6dsox_fusion_available:
+                return  # No data for this IMU
+            timestamps, x, y, z = self.imu_data.get_lsm6dsox_fusion_euler_data()
+            sensor_name = "LSM6DSOX Fusion (Euler Angles)"
+            data_type = "Orientation"
+            units = "deg"
+        elif self.current_imu == "LSM6DSOX_FUSION_LINACC":
+            if not self.imu_data.lsm6dsox_fusion_available:
+                return  # No data for this IMU
+            timestamps, x, y, z = self.imu_data.get_lsm6dsox_fusion_linacc_data()
+            sensor_name = "LSM6DSOX Fusion (Linear Acceleration)"
+            data_type = "Linear Accel"
+            units = "g"
+        elif self.current_imu == "LSM6DSOX_FUSION_EARTHACC":
+            if not self.imu_data.lsm6dsox_fusion_available:
+                return  # No data for this IMU
+            timestamps, x, y, z = self.imu_data.get_lsm6dsox_fusion_earthacc_data()
+            sensor_name = "LSM6DSOX Fusion (Earth Acceleration)"
+            data_type = "Earth Accel"
+            units = "g"
+        elif self.current_imu == "LSM6DSOX_FUSION_GRAVITY":
+            if not self.imu_data.lsm6dsox_fusion_available:
+                return  # No data for this IMU
+            timestamps, x, y, z = self.imu_data.get_lsm6dsox_fusion_gravity_data()
+            sensor_name = "LSM6DSOX Fusion (Gravity)"
+            data_type = "Gravity Vector"
+            units = "g"
         else:  # ADXL362
             if not self.imu_data.adxl362_available:
                 return  # No data for this IMU
@@ -1305,14 +1443,17 @@ class IMUVisualizer(QMainWindow):
             sensor_name = "ADXL362 Accelerometer"
 
         # Apply filtering to 3-axis data (before integration)
-        # Skip for LSM6DSV_BOTH (already filtered above) and SFLP quaternion mode
-        if self.current_imu != "LSM6DSV_SFLP" and self.current_imu != "LSM6DSV_BOTH":
+        # Skip for LSM6DSV_BOTH (already filtered above), SFLP quaternion mode, and LSM6DSOX_FUSION_QUAT (already filtered)
+        fusion_3axis = ["LSM6DSOX_FUSION_EULER", "LSM6DSOX_FUSION_LINACC", "LSM6DSOX_FUSION_EARTHACC", "LSM6DSOX_FUSION_GRAVITY"]
+        if self.current_imu not in ["LSM6DSV_SFLP", "LSM6DSV_BOTH", "LSM6DSOX_FUSION_QUAT"]:
             x, y, z = self.apply_current_filter(timestamps, x, y, z)
         elif self.current_imu == "LSM6DSV_SFLP" and self.sflp_view_mode == "EULER":
             x, y, z = self.apply_current_filter(timestamps, x, y, z)
 
-        # Apply integration based on integration level (skip for SFLP and BOTH)
-        if self.current_imu != "LSM6DSV_SFLP" and self.current_imu != "LSM6DSV_BOTH":
+        # Apply integration based on integration level (skip for SFLP, BOTH, and all fusion modes)
+        fusion_modes = ["LSM6DSOX_FUSION_QUAT", "LSM6DSOX_FUSION_EULER", "LSM6DSOX_FUSION_LINACC",
+                       "LSM6DSOX_FUSION_EARTHACC", "LSM6DSOX_FUSION_GRAVITY"]
+        if self.current_imu not in ["LSM6DSV_SFLP", "LSM6DSV_BOTH"] + fusion_modes:
             if self.integration_level == 0:
                 # Raw data
                 if self.current_imu == "LSM6DSV_SFLP":
@@ -1383,7 +1524,7 @@ class IMUVisualizer(QMainWindow):
                 gyro_units = "deg"
 
         # Handle quaternion mode specially (plot 4 components instead of 3)
-        if self.current_imu == "LSM6DSV_SFLP" and self.sflp_view_mode == "QUATERNION":
+        if (self.current_imu == "LSM6DSV_SFLP" and self.sflp_view_mode == "QUATERNION") or self.current_imu == "LSM6DSOX_FUSION_QUAT":
             title_suffix = f"{sensor_name}"
         elif self.current_imu == "LSM6DSV_BOTH":
             # BOTH mode creates its own title in the plotting section
@@ -1396,7 +1537,7 @@ class IMUVisualizer(QMainWindow):
             title_suffix += f" [Filter: {self.filter_type}]"
 
         # Downsample data for performance
-        if self.current_imu == "LSM6DSV_SFLP" and self.sflp_view_mode == "QUATERNION":
+        if (self.current_imu == "LSM6DSV_SFLP" and self.sflp_view_mode == "QUATERNION") or self.current_imu == "LSM6DSOX_FUSION_QUAT":
             # For quaternions, downsample all 4 components
             n = len(timestamps)
             if n > self.downsample_threshold:
@@ -1508,7 +1649,7 @@ class IMUVisualizer(QMainWindow):
                     self.ax_both_6.set_ylim(ylim6)
 
             # Handle quaternion mode with 4 subplots
-            elif self.current_imu == "LSM6DSV_SFLP" and self.sflp_view_mode == "QUATERNION":
+            elif (self.current_imu == "LSM6DSV_SFLP" and self.sflp_view_mode == "QUATERNION") or self.current_imu == "LSM6DSOX_FUSION_QUAT":
                 # Check if we need to reinitialize or just update
                 if not hasattr(self, 'ax4'):
                     # Reinitialize plot with 4 subplots
@@ -1788,6 +1929,48 @@ class IMUVisualizer(QMainWindow):
                 data_type = "Quaternion"
                 units = ""
 
+        elif self.current_imu == "LSM6DSOX_FUSION_QUAT":
+            if not self.imu_data.lsm6dsox_fusion_available:
+                self.stats_text.setPlainText("LSM6DSOX Fusion not detected or no data available")
+                return
+            timestamps, qw, qx, qy, qz = self.imu_data.get_lsm6dsox_fusion_quat_data()
+            # Apply filtering to quaternion data
+            qw, qx, qy, qz = self.apply_current_filter_to_quaternion(timestamps, qw, qx, qy, qz)
+            imu_name = "LSM6DSOX Fusion (Quaternion)"
+            data_type = "Quaternion"
+            units = ""
+        elif self.current_imu == "LSM6DSOX_FUSION_EULER":
+            if not self.imu_data.lsm6dsox_fusion_available:
+                self.stats_text.setPlainText("LSM6DSOX Fusion not detected or no data available")
+                return
+            timestamps, x, y, z = self.imu_data.get_lsm6dsox_fusion_euler_data()
+            imu_name = "LSM6DSOX Fusion (Euler Angles)"
+            data_type = "Orientation"
+            units = "deg"
+        elif self.current_imu == "LSM6DSOX_FUSION_LINACC":
+            if not self.imu_data.lsm6dsox_fusion_available:
+                self.stats_text.setPlainText("LSM6DSOX Fusion not detected or no data available")
+                return
+            timestamps, x, y, z = self.imu_data.get_lsm6dsox_fusion_linacc_data()
+            imu_name = "LSM6DSOX Fusion (Linear Acceleration)"
+            data_type = "Linear Accel"
+            units = "g"
+        elif self.current_imu == "LSM6DSOX_FUSION_EARTHACC":
+            if not self.imu_data.lsm6dsox_fusion_available:
+                self.stats_text.setPlainText("LSM6DSOX Fusion not detected or no data available")
+                return
+            timestamps, x, y, z = self.imu_data.get_lsm6dsox_fusion_earthacc_data()
+            imu_name = "LSM6DSOX Fusion (Earth Acceleration)"
+            data_type = "Earth Accel"
+            units = "g"
+        elif self.current_imu == "LSM6DSOX_FUSION_GRAVITY":
+            if not self.imu_data.lsm6dsox_fusion_available:
+                self.stats_text.setPlainText("LSM6DSOX Fusion not detected or no data available")
+                return
+            timestamps, x, y, z = self.imu_data.get_lsm6dsox_fusion_gravity_data()
+            imu_name = "LSM6DSOX Fusion (Gravity)"
+            data_type = "Gravity Vector"
+            units = "g"
         else:  # ADXL362
             if not self.imu_data.adxl362_available:
                 self.stats_text.setPlainText("ADXL362 not detected or no data available")
@@ -1797,14 +1980,17 @@ class IMUVisualizer(QMainWindow):
             imu_name = "ADXL362 Accelerometer"
 
         # Apply filtering to 3-axis data (before integration)
-        # Skip for LSM6DSV_BOTH (already filtered above) and SFLP quaternion mode
-        if self.current_imu != "LSM6DSV_SFLP" and self.current_imu != "LSM6DSV_BOTH":
+        # Skip for LSM6DSV_BOTH (already filtered above), SFLP quaternion mode, and LSM6DSOX_FUSION_QUAT (already filtered)
+        fusion_3axis = ["LSM6DSOX_FUSION_EULER", "LSM6DSOX_FUSION_LINACC", "LSM6DSOX_FUSION_EARTHACC", "LSM6DSOX_FUSION_GRAVITY"]
+        if self.current_imu not in ["LSM6DSV_SFLP", "LSM6DSV_BOTH", "LSM6DSOX_FUSION_QUAT"]:
             x, y, z = self.apply_current_filter(timestamps, x, y, z)
         elif self.current_imu == "LSM6DSV_SFLP" and self.sflp_view_mode == "EULER":
             x, y, z = self.apply_current_filter(timestamps, x, y, z)
 
-        # Apply integration based on integration level (skip for SFLP quaternion and BOTH)
-        if self.current_imu != "LSM6DSV_SFLP" and self.current_imu != "LSM6DSV_BOTH":
+        # Apply integration based on integration level (skip for SFLP quaternion, BOTH, and all fusion modes)
+        fusion_modes = ["LSM6DSOX_FUSION_QUAT", "LSM6DSOX_FUSION_EULER", "LSM6DSOX_FUSION_LINACC",
+                       "LSM6DSOX_FUSION_EARTHACC", "LSM6DSOX_FUSION_GRAVITY"]
+        if self.current_imu not in ["LSM6DSV_SFLP", "LSM6DSV_BOTH"] + fusion_modes:
             if self.integration_level == 0:
                 # Raw data
                 if self.current_imu == "LSM6DSV_SFLP":
@@ -1877,7 +2063,7 @@ class IMUVisualizer(QMainWindow):
                 gyro_units = "deg"
 
         # Calculate statistics
-        if self.current_imu == "LSM6DSV_SFLP" and self.sflp_view_mode == "QUATERNION":
+        if (self.current_imu == "LSM6DSV_SFLP" and self.sflp_view_mode == "QUATERNION") or self.current_imu == "LSM6DSOX_FUSION_QUAT":
             # For quaternions, calculate stats for all 4 components
             stats_qw = DataStatistics.calculate_stats(qw, qw, qw)  # Use same array 3 times for structure
             stats_qx = DataStatistics.calculate_stats(qx, qx, qx)
@@ -1907,6 +2093,12 @@ class IMUVisualizer(QMainWindow):
         if self.current_imu == "LSM6DSV_SFLP":
             stats_text += f"Total Samples: {self.imu_data.lsm_sflp_sample_count}\n"
             stats_text += f"Sample Rate: {sample_rate:.2f} Hz\n"
+        elif self.current_imu == "LSM6DSOX_FUSION_QUAT":
+            stats_text += f"Total Samples: {self.imu_data.lsmox_fusion_sample_count}\n"
+            stats_text += f"Sample Rate: {sample_rate:.2f} Hz\n"
+        elif self.current_imu in ["LSM6DSOX_FUSION_EULER", "LSM6DSOX_FUSION_LINACC", "LSM6DSOX_FUSION_EARTHACC", "LSM6DSOX_FUSION_GRAVITY"]:
+            stats_text += f"Total Samples: {self.imu_data.lsmox_fusion_sample_count}\n"
+            stats_text += f"Sample Rate: {sample_rate:.2f} Hz\n"
         elif self.current_imu == "LSM6DSV_BOTH":
             stats_text += f"Total Samples: {self.imu_data.lsm_sample_count}\n"
             stats_text += f"Accel Sample Rate: {sample_rate_accel:.2f} Hz\n"
@@ -1921,7 +2113,7 @@ class IMUVisualizer(QMainWindow):
         stats_text += "\n"
 
         # Format quaternion or regular statistics
-        if self.current_imu == "LSM6DSV_SFLP" and self.sflp_view_mode == "QUATERNION":
+        if (self.current_imu == "LSM6DSV_SFLP" and self.sflp_view_mode == "QUATERNION") or self.current_imu == "LSM6DSOX_FUSION_QUAT":
             stats_text += f"{'='*50}\n"
             stats_text += f"QUATERNION COMPONENT STATISTICS\n"
             stats_text += f"{'='*50}\n\n"
