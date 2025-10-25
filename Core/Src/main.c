@@ -39,7 +39,7 @@
 /* USER CODE BEGIN PD */
 
 /* Configuration Macros */
-#define IMU_PERFORMANCE_MODE 1  // 0 = Absolute Lowest Power (~2Hz, battery life priority)
+#define IMU_PERFORMANCE_MODE 2  // 0 = Absolute Lowest Power (~2Hz, battery life priority)
                                 // 1 = Moderate Performance (~60Hz, balanced power/performance)
                                 // 2 = High Performance (~1.5kHz+, real-time control/logging)
 #define OUTPUT_FORMAT 0         // 0 = CSV Format, 1 = Human-Readable Format
@@ -50,10 +50,10 @@
 #endif
 
 /* IMU Enable/Disable - Set to 0 to disable a specific IMU at compile time */
-#define ENABLE_LSM6DSV  1       // Enable LSM6DSV 6-axis IMU (I2C)
-#define ENABLE_LSM6DSOX 0       // Enable LSM6DSOX 6-axis IMU (I2C)
-#define ENABLE_LIS2DW12 1       // Enable LIS2DW12 3-axis accelerometer (I2C)
-#define ENABLE_ADXL362  1       // Enable ADXL362 3-axis accelerometer (SPI)
+#define ENABLE_LSM6DSV  0       // Enable LSM6DSV 6-axis IMU (I2C)
+#define ENABLE_LSM6DSOX 1       // Enable LSM6DSOX 6-axis IMU (I2C)
+#define ENABLE_LIS2DW12 0       // Enable LIS2DW12 3-axis accelerometer (I2C)
+#define ENABLE_ADXL362  0       // Enable ADXL362 3-axis accelerometer (SPI)
 
 /* LSM6DSV Feature Enable/Disable */
 #define ENABLE_LSM6DSV_SENSOR_FUSION 0  // Enable SFLP (Sensor Fusion Low Power) for game rotation, gravity vectors, and gyro bias
@@ -267,9 +267,9 @@ static uint8_t LSM6DSV_Init(void)
   lsm6dsv_xl_mode_set(&lsm6dsv_ctx, LSM6DSV_XL_LOW_POWER_4_AVG_MD);  // Low power with 4 averages for better SNR
   lsm6dsv_gy_mode_set(&lsm6dsv_ctx, LSM6DSV_GY_LOW_POWER_MD);
 #elif (IMU_PERFORMANCE_MODE == 2)
-  /* Mode 2: High Performance - 1.92 kHz ODR, high performance mode */
-  lsm6dsv_xl_data_rate_set(&lsm6dsv_ctx, LSM6DSV_ODR_AT_1920Hz);
-  lsm6dsv_gy_data_rate_set(&lsm6dsv_ctx, LSM6DSV_ODR_AT_1920Hz);
+  /* Mode 2: High Performance - 7.68 kHz ODR, high performance mode */
+  lsm6dsv_xl_data_rate_set(&lsm6dsv_ctx, LSM6DSV_ODR_AT_7680Hz);
+  lsm6dsv_gy_data_rate_set(&lsm6dsv_ctx, LSM6DSV_ODR_AT_7680Hz);
   lsm6dsv_xl_mode_set(&lsm6dsv_ctx, LSM6DSV_XL_HIGH_PERFORMANCE_MD);
   lsm6dsv_gy_mode_set(&lsm6dsv_ctx, LSM6DSV_GY_HIGH_PERFORMANCE_MD);
 #endif
@@ -358,9 +358,9 @@ static uint8_t LSM6DSOX_Init(void)
   lsm6dsox_xl_power_mode_set(&lsm6dsox_ctx, LSM6DSOX_LOW_NORMAL_POWER_MD);
   lsm6dsox_gy_power_mode_set(&lsm6dsox_ctx, LSM6DSOX_GY_NORMAL);
 #elif (IMU_PERFORMANCE_MODE == 2)
-  /* Mode 2: High Performance - 1.667 kHz ODR, high performance mode */
-  lsm6dsox_xl_data_rate_set(&lsm6dsox_ctx, LSM6DSOX_XL_ODR_1667Hz);
-  lsm6dsox_gy_data_rate_set(&lsm6dsox_ctx, LSM6DSOX_GY_ODR_1667Hz);
+  /* Mode 2: High Performance - 6.667 kHz ODR, high performance mode */
+  lsm6dsox_xl_data_rate_set(&lsm6dsox_ctx, LSM6DSOX_XL_ODR_6667Hz);
+  lsm6dsox_gy_data_rate_set(&lsm6dsox_ctx, LSM6DSOX_GY_ODR_6667Hz);
   lsm6dsox_xl_power_mode_set(&lsm6dsox_ctx, LSM6DSOX_HIGH_PERFORMANCE_MD);
   lsm6dsox_gy_power_mode_set(&lsm6dsox_ctx, LSM6DSOX_GY_HIGH_PERFORMANCE);
 #endif
@@ -1060,7 +1060,7 @@ int main(void)
 
     /* Small delay to prevent overwhelming the system */
     /* Note: In low power mode, ADXL362 samples at 6 Hz (~167ms period) */
-    HAL_Delay(10);  // 10ms delay -> ~100 Hz loop rate
+    HAL_Delay(1);  // 1ms delay -> ~1 kHz loop rate
 
     /* USER CODE END WHILE */
 

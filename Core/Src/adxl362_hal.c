@@ -210,9 +210,9 @@ uint8_t ADXL362_Init(adxl362_ctx_t *ctx)
     return 0;
   }
 #elif (IMU_PERFORMANCE_MODE == 2)
-  /* Mode 2: High Performance - 100 Hz ODR, normal noise */
+  /* Mode 2: High Performance - 400 Hz ODR, normal noise */
   uint8_t filter_ctl = ADXL362_FILTER_CTL_RANGE(ADXL362_RANGE_2G) |
-                       ADXL362_FILTER_CTL_ODR(ADXL362_ODR_100_HZ);
+                       ADXL362_FILTER_CTL_ODR(ADXL362_ODR_400_HZ);
   if (!ADXL362_WriteReg(ctx, ADXL362_REG_FILTER_CTL, filter_ctl))
   {
     return 0;
