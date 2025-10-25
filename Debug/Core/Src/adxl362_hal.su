@@ -1,0 +1,12 @@
+../Core/Src/adxl362_hal.c:23:13:ADXL362_CS_Low	24	static
+../Core/Src/adxl362_hal.c:33:13:ADXL362_CS_High	24	static
+../Core/Src/adxl362_hal.c:45:16:ADXL362_ReadReg	32	static
+../Core/Src/adxl362_hal.c:61:13:ADXL362_ReadRegs	112	static
+../Core/Src/adxl362_hal.c:88:16:ADXL362_WriteReg	24	static
+../Core/Src/adxl362_hal.c:104:9:ADXL362_SoftReset	24	static
+../Core/Src/adxl362_hal.c:129:6:ADXL362_ReadDeviceIDs	24	static
+../Core/Src/adxl362_hal.c:139:9:ADXL362_CheckDevice	24	static
+../Core/Src/adxl362_hal.c:165:9:ADXL362_Init	24	static
+../Core/Src/adxl362_hal.c:241:6:ADXL362_ReadData	32	static
+../Core/Src/adxl362_hal.c:266:6:ADXL362_ReadData_8bit	32	static
+../Core/Src/adxl362_hal.c:292:7:ADXL362_RawToMg	24	static

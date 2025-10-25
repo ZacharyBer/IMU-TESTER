@@ -1,0 +1,12 @@
+../Core/Src/adxl362_hal.c:23:13:ADXL362_CS_Low	2
+../Core/Src/adxl362_hal.c:33:13:ADXL362_CS_High	3
+../Core/Src/adxl362_hal.c:45:16:ADXL362_ReadReg	1
+../Core/Src/adxl362_hal.c:61:13:ADXL362_ReadRegs	3
+../Core/Src/adxl362_hal.c:88:16:ADXL362_WriteReg	1
+../Core/Src/adxl362_hal.c:104:9:ADXL362_SoftReset	4
+../Core/Src/adxl362_hal.c:129:6:ADXL362_ReadDeviceIDs	1
+../Core/Src/adxl362_hal.c:139:9:ADXL362_CheckDevice	5
+../Core/Src/adxl362_hal.c:165:9:ADXL362_Init	5
+../Core/Src/adxl362_hal.c:241:6:ADXL362_ReadData	1
+../Core/Src/adxl362_hal.c:266:6:ADXL362_ReadData_8bit	1
+../Core/Src/adxl362_hal.c:292:7:ADXL362_RawToMg	5
