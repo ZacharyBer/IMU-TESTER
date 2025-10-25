@@ -816,6 +816,7 @@ class IMUVisualizer(QMainWindow):
         sensor_map = {
             "LSM6DSV_ACCEL": "LSM6DSV",
             "LSM6DSV_GYRO": "LSM6DSV",
+            "LSM6DSV_BOTH": "LSM6DSV",
             "LSM6DSOX_ACCEL": "LSM6DSOX",
             "LSM6DSOX_GYRO": "LSM6DSOX",
             "LIS2DW12": "LIS2DW12",
@@ -1434,6 +1435,10 @@ class IMUVisualizer(QMainWindow):
                 if not hasattr(self, 'ax_both_1') or not hasattr(self, 'ax_both_6'):
                     # Create 3x2 grid
                     self.figure.clear()
+                    # Delete orphaned axes from other modes
+                    for ax_name in ['ax1', 'ax2', 'ax3', 'ax4', 'ax_mag', 'ax_3d']:
+                        if hasattr(self, ax_name):
+                            delattr(self, ax_name)
                     self.ax_both_1 = self.figure.add_subplot(3, 2, 1)  # Accel X
                     self.ax_both_2 = self.figure.add_subplot(3, 2, 2, sharex=self.ax_both_1)  # Gyro X
                     self.ax_both_3 = self.figure.add_subplot(3, 2, 3, sharex=self.ax_both_1)  # Accel Y
@@ -1441,13 +1446,14 @@ class IMUVisualizer(QMainWindow):
                     self.ax_both_5 = self.figure.add_subplot(3, 2, 5, sharex=self.ax_both_1)  # Accel Z
                     self.ax_both_6 = self.figure.add_subplot(3, 2, 6, sharex=self.ax_both_1)  # Gyro Z
                 else:
-                    # Save limits
-                    xlim1, ylim1 = self.ax_both_1.get_xlim(), self.ax_both_1.get_ylim()
-                    xlim2, ylim2 = self.ax_both_2.get_xlim(), self.ax_both_2.get_ylim()
-                    xlim3, ylim3 = self.ax_both_3.get_xlim(), self.ax_both_3.get_ylim()
-                    xlim4, ylim4 = self.ax_both_4.get_xlim(), self.ax_both_4.get_ylim()
-                    xlim5, ylim5 = self.ax_both_5.get_xlim(), self.ax_both_5.get_ylim()
-                    xlim6, ylim6 = self.ax_both_6.get_xlim(), self.ax_both_6.get_ylim()
+                    # Save limits only when not streaming (to preserve zoom for static data)
+                    if not self.is_streaming:
+                        xlim1, ylim1 = self.ax_both_1.get_xlim(), self.ax_both_1.get_ylim()
+                        xlim2, ylim2 = self.ax_both_2.get_xlim(), self.ax_both_2.get_ylim()
+                        xlim3, ylim3 = self.ax_both_3.get_xlim(), self.ax_both_3.get_ylim()
+                        xlim4, ylim4 = self.ax_both_4.get_xlim(), self.ax_both_4.get_ylim()
+                        xlim5, ylim5 = self.ax_both_5.get_xlim(), self.ax_both_5.get_ylim()
+                        xlim6, ylim6 = self.ax_both_6.get_xlim(), self.ax_both_6.get_ylim()
 
                     # Clear axes
                     self.ax_both_1.clear()
@@ -1491,8 +1497,8 @@ class IMUVisualizer(QMainWindow):
                 self.ax_both_5.grid(True, alpha=0.3)
                 self.ax_both_6.grid(True, alpha=0.3)
 
-                # Restore zoom limits
-                if 'xlim1' in locals() and xlim1 != (0.0, 1.0):
+                # Restore zoom limits only when not streaming
+                if not self.is_streaming and 'xlim1' in locals() and xlim1 != (0.0, 1.0):
                     self.ax_both_1.set_xlim(xlim1)
                     self.ax_both_1.set_ylim(ylim1)
                     self.ax_both_2.set_ylim(ylim2)
@@ -1507,16 +1513,25 @@ class IMUVisualizer(QMainWindow):
                 if not hasattr(self, 'ax4'):
                     # Reinitialize plot with 4 subplots
                     self.figure.clear()
+                    # Delete orphaned axes from other modes
+                    for i in range(1, 7):
+                        attr_name = f'ax_both_{i}'
+                        if hasattr(self, attr_name):
+                            delattr(self, attr_name)
+                    for ax_name in ['ax_mag', 'ax_3d']:
+                        if hasattr(self, ax_name):
+                            delattr(self, ax_name)
                     self.ax1 = self.figure.add_subplot(4, 1, 1)
                     self.ax2 = self.figure.add_subplot(4, 1, 2, sharex=self.ax1)
                     self.ax3 = self.figure.add_subplot(4, 1, 3, sharex=self.ax1)
                     self.ax4 = self.figure.add_subplot(4, 1, 4, sharex=self.ax1)
                 else:
-                    # Save current axis limits to preserve zoom
-                    xlim1, ylim1 = self.ax1.get_xlim(), self.ax1.get_ylim()
-                    xlim2, ylim2 = self.ax2.get_xlim(), self.ax2.get_ylim()
-                    xlim3, ylim3 = self.ax3.get_xlim(), self.ax3.get_ylim()
-                    xlim4, ylim4 = self.ax4.get_xlim(), self.ax4.get_ylim()
+                    # Save current axis limits to preserve zoom (only when not streaming)
+                    if not self.is_streaming:
+                        xlim1, ylim1 = self.ax1.get_xlim(), self.ax1.get_ylim()
+                        xlim2, ylim2 = self.ax2.get_xlim(), self.ax2.get_ylim()
+                        xlim3, ylim3 = self.ax3.get_xlim(), self.ax3.get_ylim()
+                        xlim4, ylim4 = self.ax4.get_xlim(), self.ax4.get_ylim()
 
                     # Clear axes
                     self.ax1.clear()
@@ -1542,8 +1557,8 @@ class IMUVisualizer(QMainWindow):
                 self.ax3.grid(True, alpha=0.3)
                 self.ax4.grid(True, alpha=0.3)
 
-                # Restore axis limits to preserve zoom
-                if hasattr(self, 'ax4') and 'xlim1' in locals() and xlim1 != (0.0, 1.0):
+                # Restore axis limits to preserve zoom (only when not streaming)
+                if not self.is_streaming and hasattr(self, 'ax4') and 'xlim1' in locals() and xlim1 != (0.0, 1.0):
                     self.ax1.set_xlim(xlim1)
                     self.ax1.set_ylim(ylim1)
                     self.ax2.set_ylim(ylim2)
@@ -1554,14 +1569,22 @@ class IMUVisualizer(QMainWindow):
                 if not hasattr(self, 'ax1') or hasattr(self, 'ax4') or hasattr(self, 'ax_both_6'):
                     # Need to reinitialize with 3 subplots
                     self.figure.clear()
+                    # Delete orphaned axes from other modes
+                    if hasattr(self, 'ax4'):
+                        del self.ax4
+                    for i in range(1, 7):
+                        attr_name = f'ax_both_{i}'
+                        if hasattr(self, attr_name):
+                            delattr(self, attr_name)
                     self.ax1 = self.figure.add_subplot(3, 1, 1)
                     self.ax2 = self.figure.add_subplot(3, 1, 2, sharex=self.ax1)
                     self.ax3 = self.figure.add_subplot(3, 1, 3, sharex=self.ax1)
                 else:
-                    # Save current axis limits to preserve zoom
-                    xlim1, ylim1 = self.ax1.get_xlim(), self.ax1.get_ylim()
-                    xlim2, ylim2 = self.ax2.get_xlim(), self.ax2.get_ylim()
-                    xlim3, ylim3 = self.ax3.get_xlim(), self.ax3.get_ylim()
+                    # Save current axis limits to preserve zoom (only when not streaming)
+                    if not self.is_streaming:
+                        xlim1, ylim1 = self.ax1.get_xlim(), self.ax1.get_ylim()
+                        xlim2, ylim2 = self.ax2.get_xlim(), self.ax2.get_ylim()
+                        xlim3, ylim3 = self.ax3.get_xlim(), self.ax3.get_ylim()
 
                     # Clear only the plot data, not the axes
                     self.ax1.clear()
@@ -1583,16 +1606,16 @@ class IMUVisualizer(QMainWindow):
                 self.ax2.grid(True, alpha=0.3)
                 self.ax3.grid(True, alpha=0.3)
 
-                # Restore axis limits to preserve zoom (if limits were previously set)
-                if 'xlim1' in locals() and xlim1 != (0.0, 1.0):
+                # Restore axis limits to preserve zoom (only when not streaming)
+                if not self.is_streaming and 'xlim1' in locals() and xlim1 != (0.0, 1.0):
                     self.ax1.set_xlim(xlim1)
                     self.ax1.set_ylim(ylim1)
                     self.ax2.set_ylim(ylim2)
                     self.ax3.set_ylim(ylim3)
 
         elif self.current_graph == "MAGNITUDE":
-            # Save current axis limits to preserve zoom
-            if hasattr(self, 'ax_mag'):
+            # Save current axis limits to preserve zoom (only when not streaming)
+            if not self.is_streaming and hasattr(self, 'ax_mag'):
                 xlim_mag, ylim_mag = self.ax_mag.get_xlim(), self.ax_mag.get_ylim()
             else:
                 xlim_mag, ylim_mag = None, None
@@ -1631,8 +1654,8 @@ class IMUVisualizer(QMainWindow):
             self.ax_mag.set_title(title_suffix)
             self.ax_mag.grid(True, alpha=0.3)
 
-            # Restore axis limits to preserve zoom
-            if xlim_mag is not None and xlim_mag != (0.0, 1.0):
+            # Restore axis limits to preserve zoom (only when not streaming)
+            if not self.is_streaming and xlim_mag is not None and xlim_mag != (0.0, 1.0):
                 self.ax_mag.set_xlim(xlim_mag)
                 self.ax_mag.set_ylim(ylim_mag)
 
