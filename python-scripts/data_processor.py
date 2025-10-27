@@ -11,6 +11,7 @@ from collections import deque
 from typing import Optional, Tuple, Dict
 from PyQt5.QtCore import QThread, pyqtSignal
 import time
+import threading
 from scipy import signal
 
 
@@ -25,6 +26,10 @@ class IMUData:
             max_samples: Maximum number of samples to keep in memory
         """
         self.max_samples = max_samples
+
+        # Thread synchronization lock to prevent race conditions between
+        # serial reader thread (writing) and GUI thread (reading)
+        self.data_lock = threading.Lock()
 
         # Track which IMUs have provided data
         self.lsm6dsv_available = False
@@ -122,232 +127,254 @@ class IMUData:
 
     def add_lsm6dsv_sample(self, timestamp, ax, ay, az, gx, gy, gz):
         """Add a new LSM6DSV data sample."""
-        if self.start_time is None:
-            self.start_time = timestamp
+        with self.data_lock:
+            if self.start_time is None:
+                self.start_time = timestamp
 
-        self.lsm6dsv_available = True
-        self.lsm_timestamp.append(timestamp)
-        self.lsm_accel_x.append(ax)
-        self.lsm_accel_y.append(ay)
-        self.lsm_accel_z.append(az)
-        self.lsm_gyro_x.append(gx)
-        self.lsm_gyro_y.append(gy)
-        self.lsm_gyro_z.append(gz)
+            self.lsm6dsv_available = True
+            self.lsm_timestamp.append(timestamp)
+            self.lsm_accel_x.append(ax)
+            self.lsm_accel_y.append(ay)
+            self.lsm_accel_z.append(az)
+            self.lsm_gyro_x.append(gx)
+            self.lsm_gyro_y.append(gy)
+            self.lsm_gyro_z.append(gz)
 
-        self.lsm_sample_count += 1
-        self.sample_count += 1
+            self.lsm_sample_count += 1
+            self.sample_count += 1
 
     def add_lsm6dsox_sample(self, timestamp, ax, ay, az, gx, gy, gz):
         """Add a new LSM6DSOX data sample."""
-        if self.start_time is None:
-            self.start_time = timestamp
+        with self.data_lock:
+            if self.start_time is None:
+                self.start_time = timestamp
 
-        self.lsm6dsox_available = True
-        self.lsmox_timestamp.append(timestamp)
-        self.lsmox_accel_x.append(ax)
-        self.lsmox_accel_y.append(ay)
-        self.lsmox_accel_z.append(az)
-        self.lsmox_gyro_x.append(gx)
-        self.lsmox_gyro_y.append(gy)
-        self.lsmox_gyro_z.append(gz)
+            self.lsm6dsox_available = True
+            self.lsmox_timestamp.append(timestamp)
+            self.lsmox_accel_x.append(ax)
+            self.lsmox_accel_y.append(ay)
+            self.lsmox_accel_z.append(az)
+            self.lsmox_gyro_x.append(gx)
+            self.lsmox_gyro_y.append(gy)
+            self.lsmox_gyro_z.append(gz)
 
-        self.lsmox_sample_count += 1
-        self.sample_count += 1
+            self.lsmox_sample_count += 1
+            self.sample_count += 1
 
     def add_lis2dw12_sample(self, timestamp, ax, ay, az):
         """Add a new LIS2DW12 data sample."""
-        if self.start_time is None:
-            self.start_time = timestamp
+        with self.data_lock:
+            if self.start_time is None:
+                self.start_time = timestamp
 
-        self.lis2dw12_available = True
-        self.lis_timestamp.append(timestamp)
-        self.lis_accel_x.append(ax)
-        self.lis_accel_y.append(ay)
-        self.lis_accel_z.append(az)
+            self.lis2dw12_available = True
+            self.lis_timestamp.append(timestamp)
+            self.lis_accel_x.append(ax)
+            self.lis_accel_y.append(ay)
+            self.lis_accel_z.append(az)
 
-        self.lis_sample_count += 1
-        self.sample_count += 1
+            self.lis_sample_count += 1
+            self.sample_count += 1
 
     def add_adxl362_sample(self, timestamp, ax, ay, az):
         """Add a new ADXL362 data sample."""
-        if self.start_time is None:
-            self.start_time = timestamp
+        with self.data_lock:
+            if self.start_time is None:
+                self.start_time = timestamp
 
-        self.adxl362_available = True
-        self.adxl_timestamp.append(timestamp)
-        self.adxl_accel_x.append(ax)
-        self.adxl_accel_y.append(ay)
-        self.adxl_accel_z.append(az)
+            self.adxl362_available = True
+            self.adxl_timestamp.append(timestamp)
+            self.adxl_accel_x.append(ax)
+            self.adxl_accel_y.append(ay)
+            self.adxl_accel_z.append(az)
 
-        self.adxl_sample_count += 1
-        self.sample_count += 1
+            self.adxl_sample_count += 1
+            self.sample_count += 1
 
     def add_lsm6dsv_sflp_sample(self, timestamp, qw, qx, qy, qz):
         """Add a new LSM6DSV SFLP (sensor fusion) quaternion sample."""
-        if self.start_time is None:
-            self.start_time = timestamp
+        with self.data_lock:
+            if self.start_time is None:
+                self.start_time = timestamp
 
-        self.lsm6dsv_sflp_available = True
-        self.lsm_sflp_timestamp.append(timestamp)
-        self.lsm_quat_w.append(qw)
-        self.lsm_quat_x.append(qx)
-        self.lsm_quat_y.append(qy)
-        self.lsm_quat_z.append(qz)
+            self.lsm6dsv_sflp_available = True
+            self.lsm_sflp_timestamp.append(timestamp)
+            self.lsm_quat_w.append(qw)
+            self.lsm_quat_x.append(qx)
+            self.lsm_quat_y.append(qy)
+            self.lsm_quat_z.append(qz)
 
-        self.lsm_sflp_sample_count += 1
-        self.sample_count += 1
+            self.lsm_sflp_sample_count += 1
+            self.sample_count += 1
 
     def add_lsm6dsox_fusion_quat_sample(self, timestamp, qw, qx, qy, qz):
         """Add a new LSM6DSOX Fusion quaternion sample."""
-        if self.start_time is None:
-            self.start_time = timestamp
+        with self.data_lock:
+            if self.start_time is None:
+                self.start_time = timestamp
 
-        self.lsm6dsox_fusion_available = True
-        self.lsmox_fusion_timestamp.append(timestamp)
-        self.lsmox_fusion_quat_w.append(qw)
-        self.lsmox_fusion_quat_x.append(qx)
-        self.lsmox_fusion_quat_y.append(qy)
-        self.lsmox_fusion_quat_z.append(qz)
-
-        self.lsmox_fusion_sample_count += 1
-        self.sample_count += 1
-
-    def add_lsm6dsox_fusion_euler_sample(self, timestamp, roll, pitch, yaw):
-        """Add a new LSM6DSOX Fusion Euler angles sample."""
-        if self.start_time is None:
-            self.start_time = timestamp
-
-        self.lsm6dsox_fusion_available = True
-        # Reuse timestamp if already added
-        if len(self.lsmox_fusion_timestamp) == 0 or self.lsmox_fusion_timestamp[-1] != timestamp:
+            self.lsm6dsox_fusion_available = True
             self.lsmox_fusion_timestamp.append(timestamp)
+            self.lsmox_fusion_quat_w.append(qw)
+            self.lsmox_fusion_quat_x.append(qx)
+            self.lsmox_fusion_quat_y.append(qy)
+            self.lsmox_fusion_quat_z.append(qz)
 
-        self.lsmox_fusion_roll.append(roll)
-        self.lsmox_fusion_pitch.append(pitch)
-        self.lsmox_fusion_yaw.append(yaw)
-
-        # Only increment if this is a new timestamp
-        if len(self.lsmox_fusion_timestamp) > 0 and self.lsmox_fusion_timestamp[-1] == timestamp:
-            pass  # Same timestamp as quaternion, don't double-count
-        else:
             self.lsmox_fusion_sample_count += 1
             self.sample_count += 1
 
+    def add_lsm6dsox_fusion_euler_sample(self, timestamp, roll, pitch, yaw):
+        """Add a new LSM6DSOX Fusion Euler angles sample."""
+        with self.data_lock:
+            if self.start_time is None:
+                self.start_time = timestamp
+
+            self.lsm6dsox_fusion_available = True
+            # Reuse timestamp if already added
+            if len(self.lsmox_fusion_timestamp) == 0 or self.lsmox_fusion_timestamp[-1] != timestamp:
+                self.lsmox_fusion_timestamp.append(timestamp)
+
+            self.lsmox_fusion_roll.append(roll)
+            self.lsmox_fusion_pitch.append(pitch)
+            self.lsmox_fusion_yaw.append(yaw)
+
+            # Only increment if this is a new timestamp
+            if len(self.lsmox_fusion_timestamp) > 0 and self.lsmox_fusion_timestamp[-1] == timestamp:
+                pass  # Same timestamp as quaternion, don't double-count
+            else:
+                self.lsmox_fusion_sample_count += 1
+                self.sample_count += 1
+
     def add_lsm6dsox_fusion_linacc_sample(self, timestamp, x, y, z):
         """Add a new LSM6DSOX Fusion linear acceleration sample."""
-        if self.start_time is None:
-            self.start_time = timestamp
+        with self.data_lock:
+            if self.start_time is None:
+                self.start_time = timestamp
 
-        self.lsm6dsox_fusion_available = True
-        self.lsmox_fusion_linacc_x.append(x)
-        self.lsmox_fusion_linacc_y.append(y)
-        self.lsmox_fusion_linacc_z.append(z)
+            self.lsm6dsox_fusion_available = True
+            self.lsmox_fusion_linacc_x.append(x)
+            self.lsmox_fusion_linacc_y.append(y)
+            self.lsmox_fusion_linacc_z.append(z)
 
     def add_lsm6dsox_fusion_earthacc_sample(self, timestamp, x, y, z):
         """Add a new LSM6DSOX Fusion earth acceleration sample."""
-        if self.start_time is None:
-            self.start_time = timestamp
+        with self.data_lock:
+            if self.start_time is None:
+                self.start_time = timestamp
 
-        self.lsm6dsox_fusion_available = True
-        self.lsmox_fusion_earthacc_x.append(x)
-        self.lsmox_fusion_earthacc_y.append(y)
-        self.lsmox_fusion_earthacc_z.append(z)
+            self.lsm6dsox_fusion_available = True
+            self.lsmox_fusion_earthacc_x.append(x)
+            self.lsmox_fusion_earthacc_y.append(y)
+            self.lsmox_fusion_earthacc_z.append(z)
 
     def add_lsm6dsox_fusion_gravity_sample(self, timestamp, x, y, z):
         """Add a new LSM6DSOX Fusion gravity vector sample."""
-        if self.start_time is None:
-            self.start_time = timestamp
+        with self.data_lock:
+            if self.start_time is None:
+                self.start_time = timestamp
 
-        self.lsm6dsox_fusion_available = True
-        self.lsmox_fusion_gravity_x.append(x)
-        self.lsmox_fusion_gravity_y.append(y)
-        self.lsmox_fusion_gravity_z.append(z)
+            self.lsm6dsox_fusion_available = True
+            self.lsmox_fusion_gravity_x.append(x)
+            self.lsmox_fusion_gravity_y.append(y)
+            self.lsmox_fusion_gravity_z.append(z)
 
     def get_lsm_accel_data(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """Get LSM6DSV accelerometer data."""
-        return (np.array(self.lsm_timestamp),
-                np.array(self.lsm_accel_x),
-                np.array(self.lsm_accel_y),
-                np.array(self.lsm_accel_z))
+        with self.data_lock:
+            return (np.array(self.lsm_timestamp),
+                    np.array(self.lsm_accel_x),
+                    np.array(self.lsm_accel_y),
+                    np.array(self.lsm_accel_z))
 
     def get_lsm_gyro_data(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """Get LSM6DSV gyroscope data."""
-        return (np.array(self.lsm_timestamp),
-                np.array(self.lsm_gyro_x),
-                np.array(self.lsm_gyro_y),
-                np.array(self.lsm_gyro_z))
+        with self.data_lock:
+            return (np.array(self.lsm_timestamp),
+                    np.array(self.lsm_gyro_x),
+                    np.array(self.lsm_gyro_y),
+                    np.array(self.lsm_gyro_z))
 
     def get_lsmox_accel_data(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """Get LSM6DSOX accelerometer data."""
-        return (np.array(self.lsmox_timestamp),
-                np.array(self.lsmox_accel_x),
-                np.array(self.lsmox_accel_y),
-                np.array(self.lsmox_accel_z))
+        with self.data_lock:
+            return (np.array(self.lsmox_timestamp),
+                    np.array(self.lsmox_accel_x),
+                    np.array(self.lsmox_accel_y),
+                    np.array(self.lsmox_accel_z))
 
     def get_lsmox_gyro_data(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """Get LSM6DSOX gyroscope data."""
-        return (np.array(self.lsmox_timestamp),
-                np.array(self.lsmox_gyro_x),
-                np.array(self.lsmox_gyro_y),
-                np.array(self.lsmox_gyro_z))
+        with self.data_lock:
+            return (np.array(self.lsmox_timestamp),
+                    np.array(self.lsmox_gyro_x),
+                    np.array(self.lsmox_gyro_y),
+                    np.array(self.lsmox_gyro_z))
 
     def get_lis_accel_data(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """Get LIS2DW12 accelerometer data."""
-        return (np.array(self.lis_timestamp),
-                np.array(self.lis_accel_x),
-                np.array(self.lis_accel_y),
-                np.array(self.lis_accel_z))
+        with self.data_lock:
+            return (np.array(self.lis_timestamp),
+                    np.array(self.lis_accel_x),
+                    np.array(self.lis_accel_y),
+                    np.array(self.lis_accel_z))
 
     def get_adxl362_accel_data(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """Get ADXL362 accelerometer data."""
-        return (np.array(self.adxl_timestamp),
-                np.array(self.adxl_accel_x),
-                np.array(self.adxl_accel_y),
-                np.array(self.adxl_accel_z))
+        with self.data_lock:
+            return (np.array(self.adxl_timestamp),
+                    np.array(self.adxl_accel_x),
+                    np.array(self.adxl_accel_y),
+                    np.array(self.adxl_accel_z))
 
     def get_lsm_sflp_data(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """Get LSM6DSV SFLP quaternion data."""
-        return (np.array(self.lsm_sflp_timestamp),
-                np.array(self.lsm_quat_w),
-                np.array(self.lsm_quat_x),
-                np.array(self.lsm_quat_y),
-                np.array(self.lsm_quat_z))
+        with self.data_lock:
+            return (np.array(self.lsm_sflp_timestamp),
+                    np.array(self.lsm_quat_w),
+                    np.array(self.lsm_quat_x),
+                    np.array(self.lsm_quat_y),
+                    np.array(self.lsm_quat_z))
 
     def get_lsm6dsox_fusion_quat_data(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """Get LSM6DSOX Fusion quaternion data."""
-        return (np.array(self.lsmox_fusion_timestamp),
-                np.array(self.lsmox_fusion_quat_w),
-                np.array(self.lsmox_fusion_quat_x),
-                np.array(self.lsmox_fusion_quat_y),
-                np.array(self.lsmox_fusion_quat_z))
+        with self.data_lock:
+            return (np.array(self.lsmox_fusion_timestamp),
+                    np.array(self.lsmox_fusion_quat_w),
+                    np.array(self.lsmox_fusion_quat_x),
+                    np.array(self.lsmox_fusion_quat_y),
+                    np.array(self.lsmox_fusion_quat_z))
 
     def get_lsm6dsox_fusion_euler_data(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """Get LSM6DSOX Fusion Euler angles data."""
-        return (np.array(self.lsmox_fusion_timestamp),
-                np.array(self.lsmox_fusion_roll),
-                np.array(self.lsmox_fusion_pitch),
-                np.array(self.lsmox_fusion_yaw))
+        with self.data_lock:
+            return (np.array(self.lsmox_fusion_timestamp),
+                    np.array(self.lsmox_fusion_roll),
+                    np.array(self.lsmox_fusion_pitch),
+                    np.array(self.lsmox_fusion_yaw))
 
     def get_lsm6dsox_fusion_linacc_data(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """Get LSM6DSOX Fusion linear acceleration data."""
-        return (np.array(self.lsmox_fusion_timestamp),
-                np.array(self.lsmox_fusion_linacc_x),
-                np.array(self.lsmox_fusion_linacc_y),
-                np.array(self.lsmox_fusion_linacc_z))
+        with self.data_lock:
+            return (np.array(self.lsmox_fusion_timestamp),
+                    np.array(self.lsmox_fusion_linacc_x),
+                    np.array(self.lsmox_fusion_linacc_y),
+                    np.array(self.lsmox_fusion_linacc_z))
 
     def get_lsm6dsox_fusion_earthacc_data(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """Get LSM6DSOX Fusion earth acceleration data."""
-        return (np.array(self.lsmox_fusion_timestamp),
-                np.array(self.lsmox_fusion_earthacc_x),
-                np.array(self.lsmox_fusion_earthacc_y),
-                np.array(self.lsmox_fusion_earthacc_z))
+        with self.data_lock:
+            return (np.array(self.lsmox_fusion_timestamp),
+                    np.array(self.lsmox_fusion_earthacc_x),
+                    np.array(self.lsmox_fusion_earthacc_y),
+                    np.array(self.lsmox_fusion_earthacc_z))
 
     def get_lsm6dsox_fusion_gravity_data(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """Get LSM6DSOX Fusion gravity vector data."""
-        return (np.array(self.lsmox_fusion_timestamp),
-                np.array(self.lsmox_fusion_gravity_x),
-                np.array(self.lsmox_fusion_gravity_y),
-                np.array(self.lsmox_fusion_gravity_z))
+        with self.data_lock:
+            return (np.array(self.lsmox_fusion_timestamp),
+                    np.array(self.lsmox_fusion_gravity_x),
+                    np.array(self.lsmox_fusion_gravity_y),
+                    np.array(self.lsmox_fusion_gravity_z))
 
     @staticmethod
     def quaternion_to_euler(qw, qx, qy, qz) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:

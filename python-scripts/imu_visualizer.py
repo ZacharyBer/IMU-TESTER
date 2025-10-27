@@ -1323,6 +1323,29 @@ class IMUVisualizer(QMainWindow):
         # Downsample using slicing
         return timestamps[::factor], x[::factor], y[::factor], z[::factor]
 
+    def sync_array_lengths(self, timestamps, x, y, z):
+        """
+        Ensure all arrays have the same length by truncating to minimum length.
+
+        This defensive function prevents dimension mismatch errors that can occur
+        when filtering or integration operations modify array lengths.
+
+        Args:
+            timestamps, x, y, z: Data arrays that should have matching lengths
+
+        Returns:
+            Synchronized timestamps, x, y, z arrays with matching lengths
+        """
+        lengths = [len(timestamps), len(x), len(y), len(z)]
+        min_length = min(lengths)
+
+        # Only truncate if there's a mismatch
+        if len(set(lengths)) > 1:
+            print(f"Warning: Array length mismatch detected - timestamps: {len(timestamps)}, x: {len(x)}, y: {len(y)}, z: {len(z)}. Truncating to {min_length}")
+            return timestamps[:min_length], x[:min_length], y[:min_length], z[:min_length]
+
+        return timestamps, x, y, z
+
     def update_plots(self):
         """Update the plots with current data."""
         if self.imu_data.sample_count == 0:
@@ -1447,8 +1470,12 @@ class IMUVisualizer(QMainWindow):
         fusion_3axis = ["LSM6DSOX_FUSION_EULER", "LSM6DSOX_FUSION_LINACC", "LSM6DSOX_FUSION_EARTHACC", "LSM6DSOX_FUSION_GRAVITY"]
         if self.current_imu not in ["LSM6DSV_SFLP", "LSM6DSV_BOTH", "LSM6DSOX_FUSION_QUAT"]:
             x, y, z = self.apply_current_filter(timestamps, x, y, z)
+            # Sync arrays after filtering to prevent dimension mismatch
+            timestamps, x, y, z = self.sync_array_lengths(timestamps, x, y, z)
         elif self.current_imu == "LSM6DSV_SFLP" and self.sflp_view_mode == "EULER":
             x, y, z = self.apply_current_filter(timestamps, x, y, z)
+            # Sync arrays after filtering to prevent dimension mismatch
+            timestamps, x, y, z = self.sync_array_lengths(timestamps, x, y, z)
 
         # Apply integration based on integration level (skip for SFLP, BOTH, and all fusion modes)
         fusion_modes = ["LSM6DSOX_FUSION_QUAT", "LSM6DSOX_FUSION_EULER", "LSM6DSOX_FUSION_LINACC",
@@ -1470,6 +1497,8 @@ class IMUVisualizer(QMainWindow):
                 if len(timestamps) < 2:
                     return  # Need at least 2 points for integration
                 x, y, z = DataIntegrator.integrate_once(timestamps, x, y, z, is_accel=is_accel, detrend=self.detrend_enabled)
+                # Sync arrays after integration to prevent dimension mismatch
+                timestamps, x, y, z = self.sync_array_lengths(timestamps, x, y, z)
                 if is_accel:
                     data_type = "Velocity"
                     units = "m/s"
@@ -1481,6 +1510,8 @@ class IMUVisualizer(QMainWindow):
                 if len(timestamps) < 2:
                     return  # Need at least 2 points for integration
                 x, y, z = DataIntegrator.integrate_twice(timestamps, x, y, z, detrend=self.detrend_enabled)
+                # Sync arrays after integration to prevent dimension mismatch
+                timestamps, x, y, z = self.sync_array_lengths(timestamps, x, y, z)
                 data_type = "Position"
                 units = "m"
         elif self.current_imu == "LSM6DSV_SFLP" and self.sflp_view_mode == "EULER":
@@ -1548,6 +1579,8 @@ class IMUVisualizer(QMainWindow):
                 qy = qy[::factor]
                 qz = qz[::factor]
         elif self.current_imu != "LSM6DSV_BOTH":
+            # Sync arrays before downsampling to prevent dimension mismatch
+            timestamps, x, y, z = self.sync_array_lengths(timestamps, x, y, z)
             # Skip downsampling for BOTH mode (does its own downsampling in plotting sections)
             timestamps, x, y, z = self.downsample_data(timestamps, x, y, z)
 
@@ -1606,11 +1639,25 @@ class IMUVisualizer(QMainWindow):
 
                 # Plot accel and gyro data
                 if len(time_seconds_accel) > 0:
+                    # Final sync check before plotting to prevent dimension mismatch
+                    min_len_accel = min(len(time_seconds_accel), len(accel_x), len(accel_y), len(accel_z))
+                    time_seconds_accel = time_seconds_accel[:min_len_accel]
+                    accel_x = accel_x[:min_len_accel]
+                    accel_y = accel_y[:min_len_accel]
+                    accel_z = accel_z[:min_len_accel]
+
                     self.ax_both_1.plot(time_seconds_accel, accel_x, 'r-', linewidth=0.5)
                     self.ax_both_3.plot(time_seconds_accel, accel_y, 'g-', linewidth=0.5)
                     self.ax_both_5.plot(time_seconds_accel, accel_z, 'b-', linewidth=0.5)
 
                 if len(time_seconds_gyro) > 0:
+                    # Final sync check before plotting to prevent dimension mismatch
+                    min_len_gyro = min(len(time_seconds_gyro), len(gyro_x), len(gyro_y), len(gyro_z))
+                    time_seconds_gyro = time_seconds_gyro[:min_len_gyro]
+                    gyro_x = gyro_x[:min_len_gyro]
+                    gyro_y = gyro_y[:min_len_gyro]
+                    gyro_z = gyro_z[:min_len_gyro]
+
                     self.ax_both_2.plot(time_seconds_gyro, gyro_x, 'r-', linewidth=0.5)
                     self.ax_both_4.plot(time_seconds_gyro, gyro_y, 'g-', linewidth=0.5)
                     self.ax_both_6.plot(time_seconds_gyro, gyro_z, 'b-', linewidth=0.5)
@@ -1681,6 +1728,14 @@ class IMUVisualizer(QMainWindow):
                     self.ax4.clear()
 
                 if len(time_seconds) > 0:
+                    # Final sync check before plotting to prevent dimension mismatch
+                    min_len = min(len(time_seconds), len(qw), len(qx), len(qy), len(qz))
+                    time_seconds = time_seconds[:min_len]
+                    qw = qw[:min_len]
+                    qx = qx[:min_len]
+                    qy = qy[:min_len]
+                    qz = qz[:min_len]
+
                     self.ax1.plot(time_seconds, qw, 'purple', linewidth=0.5)
                     self.ax2.plot(time_seconds, qx, 'r-', linewidth=0.5)
                     self.ax3.plot(time_seconds, qy, 'g-', linewidth=0.5)
@@ -1733,6 +1788,13 @@ class IMUVisualizer(QMainWindow):
                     self.ax3.clear()
 
                 if len(time_seconds) > 0:
+                    # Final sync check before plotting to prevent dimension mismatch
+                    min_len = min(len(time_seconds), len(x), len(y), len(z))
+                    time_seconds = time_seconds[:min_len]
+                    x = x[:min_len]
+                    y = y[:min_len]
+                    z = z[:min_len]
+
                     self.ax1.plot(time_seconds, x, 'r-', linewidth=0.5)
                     self.ax2.plot(time_seconds, y, 'g-', linewidth=0.5)
                     self.ax3.plot(time_seconds, z, 'b-', linewidth=0.5)
@@ -1769,22 +1831,31 @@ class IMUVisualizer(QMainWindow):
                 time_seconds_gyro = (timestamps_gyro - timestamps_gyro[0]) / 1e6 if len(timestamps_gyro) > 0 else np.array([])
 
                 if len(time_seconds_accel) > 0:
-                    accel_magnitude = np.sqrt(accel_x**2 + accel_y**2 + accel_z**2)
-                    self.ax_mag.plot(time_seconds_accel, accel_magnitude, 'b-', linewidth=0.8, label=f'Accel ({accel_units})')
+                    # Final sync check before plotting to prevent dimension mismatch
+                    min_len = min(len(time_seconds_accel), len(accel_x), len(accel_y), len(accel_z))
+                    accel_magnitude = np.sqrt(accel_x[:min_len]**2 + accel_y[:min_len]**2 + accel_z[:min_len]**2)
+                    self.ax_mag.plot(time_seconds_accel[:min_len], accel_magnitude, 'b-', linewidth=0.8, label=f'Accel ({accel_units})')
 
                 if len(time_seconds_gyro) > 0:
-                    gyro_magnitude = np.sqrt(gyro_x**2 + gyro_y**2 + gyro_z**2)
-                    self.ax_mag.plot(time_seconds_gyro, gyro_magnitude, 'r-', linewidth=0.8, label=f'Gyro ({gyro_units})')
+                    # Final sync check before plotting to prevent dimension mismatch
+                    min_len = min(len(time_seconds_gyro), len(gyro_x), len(gyro_y), len(gyro_z))
+                    gyro_magnitude = np.sqrt(gyro_x[:min_len]**2 + gyro_y[:min_len]**2 + gyro_z[:min_len]**2)
+                    self.ax_mag.plot(time_seconds_gyro[:min_len], gyro_magnitude, 'r-', linewidth=0.8, label=f'Gyro ({gyro_units})')
 
                 self.ax_mag.legend(loc='upper right')
                 self.ax_mag.set_ylabel('Magnitude')
             elif len(time_seconds) > 0:
                 if self.current_imu == "LSM6DSV_SFLP" and self.sflp_view_mode == "QUATERNION":
                     # Quaternion magnitude (should be ~1.0 if normalized)
-                    magnitude = np.sqrt(qw**2 + qx**2 + qy**2 + qz**2)
+                    # Final sync check before plotting to prevent dimension mismatch
+                    min_len = min(len(time_seconds), len(qw), len(qx), len(qy), len(qz))
+                    magnitude = np.sqrt(qw[:min_len]**2 + qx[:min_len]**2 + qy[:min_len]**2 + qz[:min_len]**2)
+                    self.ax_mag.plot(time_seconds[:min_len], magnitude, 'purple', linewidth=0.8)
                 else:
-                    magnitude = np.sqrt(x**2 + y**2 + z**2)
-                self.ax_mag.plot(time_seconds, magnitude, 'purple', linewidth=0.8)
+                    # Final sync check before plotting to prevent dimension mismatch
+                    min_len = min(len(time_seconds), len(x), len(y), len(z))
+                    magnitude = np.sqrt(x[:min_len]**2 + y[:min_len]**2 + z[:min_len]**2)
+                    self.ax_mag.plot(time_seconds[:min_len], magnitude, 'purple', linewidth=0.8)
 
                 if self.current_imu == "LSM6DSV_SFLP" and self.sflp_view_mode == "QUATERNION":
                     self.ax_mag.set_ylabel('Quaternion Magnitude')
@@ -1808,12 +1879,22 @@ class IMUVisualizer(QMainWindow):
             if self.current_imu == "LSM6DSV_BOTH":
                 # Plot both accelerometer and gyroscope trajectories
                 if len(accel_x) > 0:
+                    # Final sync check before plotting to prevent dimension mismatch
+                    min_len = min(len(accel_x), len(accel_y), len(accel_z))
+                    accel_x = accel_x[:min_len]
+                    accel_y = accel_y[:min_len]
+                    accel_z = accel_z[:min_len]
                     colors_accel = np.arange(len(accel_x))
                     scatter_accel = self.ax_3d.scatter(accel_x, accel_y, accel_z,
                                                       c=colors_accel, cmap='Blues',
                                                       s=2, alpha=0.6, label='Accelerometer')
 
                 if len(gyro_x) > 0:
+                    # Final sync check before plotting to prevent dimension mismatch
+                    min_len = min(len(gyro_x), len(gyro_y), len(gyro_z))
+                    gyro_x = gyro_x[:min_len]
+                    gyro_y = gyro_y[:min_len]
+                    gyro_z = gyro_z[:min_len]
                     colors_gyro = np.arange(len(gyro_x))
                     scatter_gyro = self.ax_3d.scatter(gyro_x, gyro_y, gyro_z,
                                                      c=colors_gyro, cmap='Reds',
@@ -1826,6 +1907,11 @@ class IMUVisualizer(QMainWindow):
                 self.ax_3d.set_title(f"{title_suffix} - 3D Trajectory")
             else:
                 if len(x) > 0:
+                    # Final sync check before plotting to prevent dimension mismatch
+                    min_len = min(len(x), len(y), len(z))
+                    x = x[:min_len]
+                    y = y[:min_len]
+                    z = z[:min_len]
                     # Use colormap for time progression
                     colors = np.arange(len(x))
                     scatter = self.ax_3d.scatter(x, y, z, c=colors, cmap='viridis',

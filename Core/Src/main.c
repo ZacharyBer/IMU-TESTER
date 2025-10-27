@@ -40,7 +40,7 @@
 /* USER CODE BEGIN PD */
 
 /* Configuration Macros */
-#define IMU_PERFORMANCE_MODE 2  // 0 = Absolute Lowest Power (~2Hz, battery life priority)
+#define IMU_PERFORMANCE_MODE 1  // 0 = Absolute Lowest Power (~2Hz, battery life priority)
                                 // 1 = Moderate Performance (~60Hz, balanced power/performance)
                                 // 2 = High Performance (~1.5kHz+, real-time control/logging)
 #define OUTPUT_FORMAT 0         // 0 = CSV Format, 1 = Human-Readable Format
@@ -51,16 +51,16 @@
 #endif
 
 /* IMU Enable/Disable - Set to 0 to disable a specific IMU at compile time */
-#define ENABLE_LSM6DSV  0       // Enable LSM6DSV 6-axis IMU (I2C)
-#define ENABLE_LSM6DSOX 1       // Enable LSM6DSOX 6-axis IMU (I2C)
-#define ENABLE_LIS2DW12 0       // Enable LIS2DW12 3-axis accelerometer (I2C)
-#define ENABLE_ADXL362  0       // Enable ADXL362 3-axis accelerometer (SPI)
+#define ENABLE_LSM6DSV  1       // Enable LSM6DSV 6-axis IMU (I2C)
+#define ENABLE_LSM6DSOX 0       // Enable LSM6DSOX 6-axis IMU (I2C)
+#define ENABLE_LIS2DW12 1       // Enable LIS2DW12 3-axis accelerometer (I2C)
+#define ENABLE_ADXL362  1       // Enable ADXL362 3-axis accelerometer (SPI)
 
 /* LSM6DSV Feature Enable/Disable */
-#define ENABLE_LSM6DSV_SENSOR_FUSION 0  // Enable SFLP (Sensor Fusion Low Power) for game rotation, gravity vectors, and gyro bias
+#define ENABLE_LSM6DSV_SENSOR_FUSION 1  // Enable SFLP (Sensor Fusion Low Power) for game rotation, gravity vectors, and gyro bias
 
 /* LSM6DSOX Feature Enable/Disable */
-#define ENABLE_LSM6DSOX_FUSION 1        // Enable Fusion library sensor fusion for LSM6DSOX (quaternion, Euler angles, linear accel)
+#define ENABLE_LSM6DSOX_FUSION 0        // Enable Fusion library sensor fusion for LSM6DSOX (quaternion, Euler angles, linear accel)
 
 /* IMU I2C Addresses */
 #define LSM6DSV_I2C_ADDR  (0x6B << 1)  // LSM6DSV address (SDO/SA0 pin high)
